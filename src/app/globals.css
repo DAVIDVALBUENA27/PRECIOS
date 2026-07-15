@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+
+/*
+ * Personaliza tu tema aquí
+ * Documentación: https://tailwindcss.com/docs/theme
+ */
+
+/* ===== Etiquetas de góndola: 80mm × 36mm, 2 columnas ===== */
+
+.print-grid {
+  display: grid;
+  grid-template-columns: 80mm 80mm;
+  grid-auto-rows: 36mm;
+  gap: 0;
+}
+
+.print-tag {
+  position: relative;
+  width: 80mm;
+  height: 36mm;
+  border: 0.5pt solid #999;
+  padding: 2.5mm 3mm;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  font-family: Arial, sans-serif;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-tag .tag-logo {
+  position: absolute;
+  top: 2mm;
+  right: 2.5mm;
+  width: 8mm;
+  height: 8mm;
+  object-fit: contain;
+}
+
+.print-tag .tag-lab {
+  font-size: 7px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.print-tag .tag-name {
+  margin-top: 1mm;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.print-tag .tag-sku {
+  font-family: 'Courier New', monospace;
+  font-size: 7px;
+  color: #555;
+}
+
+.print-tag .tag-price-row {
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 2.5mm;
+}
+
+.print-tag .tag-price {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+
+.print-tag .tag-unit-price {
+  font-size: 9px;
+  font-weight: 600;
+  color: #555;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+}
