@@ -1,11 +1,14 @@
 'use client'
 
+import { useMemo } from 'react'
 import { ProductWithDiff } from '@/features/labels/types'
 import { formatUnitPrice } from '@/features/labels/lib/unitPrice'
 import { LabColor } from '@/features/labels/hooks/useLabColors'
 
 function formatPrice(price: number | null): string {
-  return price !== null ? `$${price.toLocaleString('es-CO')}` : '—'
+  return price !== null
+    ? `$${price.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    : '—'
 }
 
 interface ProductTableProps {
@@ -17,6 +20,18 @@ interface ProductTableProps {
 
 export function ProductTable({ products, labColors, onToggle, onToggleAll }: ProductTableProps) {
   const allSelected = products.length > 0 && products.every((p) => p.selected)
+
+  // Extraer las columnas extra dinámicas de todos los productos
+  const extraCols = useMemo(() => {
+    if (products.length === 0) return []
+    const keys = new Set<string>()
+    products.forEach((p) => {
+      if (p.extra) {
+        Object.keys(p.extra).forEach((k) => keys.add(k))
+      }
+    })
+    return Array.from(keys)
+  }, [products])
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -37,6 +52,9 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
             <th className="px-4 py-3">Precio actual</th>
             <th className="px-4 py-3">Precio anterior</th>
             <th className="px-4 py-3">Precio/unidad</th>
+            {extraCols.map((col) => (
+              <th key={col} className="px-4 py-3">{col}</th>
+            ))}
             <th className="px-4 py-3">Laboratorio</th>
           </tr>
         </thead>
@@ -72,6 +90,11 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
                 <td className="px-4 py-2 text-gray-500">
                   {formatUnitPrice(p.unitPrice, p.contentParsed?.normalizedUnit ?? null) || '—'}
                 </td>
+                {extraCols.map((col) => (
+                  <td key={col} className="px-4 py-2 font-mono text-xs text-gray-500 max-w-[150px] truncate" title={p.extra?.[col] || ''}>
+                    {p.extra?.[col] || '—'}
+                  </td>
+                ))}
                 <td className="px-4 py-2">
                   <span
                     className="rounded px-2 py-0.5 text-xs font-medium"

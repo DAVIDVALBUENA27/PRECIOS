@@ -80,7 +80,7 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
       return
     }
 
-    const products = rowsToProducts(rows, result.data as ColMapping)
+    const products = rowsToProducts(rows, result.data as ColMapping, headers)
     if (products.length === 0) {
       setError('No se encontró ningún producto con las columnas seleccionadas. Revisa el mapeo.')
       return
@@ -116,11 +116,14 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
                 className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">— Sin mapear —</option>
-                {headers.map((h, i) => (
-                  <option key={i} value={i}>
-                    {h || `Columna ${i + 1}`}
-                  </option>
-                ))}
+                {headers
+                  .map((h, i) => ({ name: h, index: i }))
+                  .filter((col) => col.name !== '')
+                  .map((col) => (
+                    <option key={col.index} value={col.index}>
+                      {col.name}
+                    </option>
+                  ))}
               </select>
               {selection[field.key] !== null && (
                 <p className="mt-1 truncate text-xs text-gray-400">{sampleValues(selection[field.key])}</p>

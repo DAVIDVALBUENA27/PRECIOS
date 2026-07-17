@@ -16,6 +16,7 @@ export interface RawProduct {
   contentRaw: string | null // texto crudo del Excel, ej "500 GR"
   contentParsed: ParsedContent | null
   unitPrice: number | null // price / normalizedQty; null si no aplica
+  extra?: Record<string, string>
 }
 
 export interface ProductWithDiff extends RawProduct {

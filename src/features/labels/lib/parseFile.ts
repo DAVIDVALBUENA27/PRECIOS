@@ -11,29 +11,63 @@ export function parseWorkbook(buffer: ArrayBuffer | string, isCsv: boolean): str
 }
 
 export function autoDetectColumns(headers: string[]): Partial<ColMapping> {
-  const detect = (keywords: string[]) => {
-    const idx = headers.findIndex(h =>
-      keywords.some(k => h.toLowerCase().normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '').includes(k))
+  // Normalizar encabezados (quitar acentos, caracteres extraños y tolerar problemas de codificación como cdigo)
+  const cleanHeaders = headers.map(h => 
+    h.toLowerCase()
+     .normalize('NFD')
+     .replace(/[\u0300-\u036f]/g, '')
+     .replace(/[^a-z0-9\s]/g, 'o') // Reemplaza caracteres raros como  con 'o' (ej. cdigo -> codigo)
+     .trim()
+  )
+
+  const findIndex = (keywords: string[], excludeKeywords: string[] = []) => {
+    // Primero buscar coincidencia exacta
+    let idx = cleanHeaders.findIndex(h => 
+      keywords.some(k => h === k)
+    )
+    if (idx >= 0) return idx
+
+    // Luego buscar coincidencia parcial excluyendo ciertas palabras
+    idx = cleanHeaders.findIndex(h => 
+      keywords.some(k => h.includes(k)) && 
+      !excludeKeywords.some(ek => h.includes(ek))
     )
     return idx >= 0 ? idx : undefined
   }
-  return {
-    name: detect(['nombre', 'producto', 'descripcion', 'articulo', 'name']),
-    sku: detect(['sku', 'codigo', 'code', 'referencia', 'ref', 'barcode', 'cod']),
-    price: detect(['precio', 'price', 'pvp', 'valor', 'venta']),
-    lab: detect(['laboratorio', 'marca', 'lab', 'brand', 'fabricante', 'linea']),
-    content: detect(['contenido', 'presentacion', 'tamano', 'peso', 'volumen', 'content']),
-  }
+
+  const sku = findIndex(['sku', 'codigo barras', 'barcode', 'codigo producto', 'codigo', 'code', 'referencia', 'ref', 'cod'])
+  const name = findIndex(['nombre producto', 'nombre', 'descripcion', 'articulo', 'name', 'producto'], ['codigo', 'grupo'])
+  const price = findIndex(['precio venta', 'valor caja contado', 'precio', 'price', 'pvp', 'valor', 'venta'], ['anterior', 'costo'])
+  const lab = findIndex(['laboratorio', 'marca', 'lab', 'brand', 'fabricante', 'linea'])
+  const content = findIndex(['contenido', 'presentacion', 'tamano', 'peso', 'volumen', 'content'])
+
+  return { name, sku, price, lab, content }
 }
 
-export function rowsToProducts(rows: string[][], map: ColMapping): RawProduct[] {
+export function rowsToProducts(rows: string[][], map: ColMapping, headers: string[]): RawProduct[] {
+  const mappedIndices = new Set([
+    map.name,
+    map.sku,
+    map.price,
+    map.lab !== null ? map.lab : -1,
+    map.content !== null ? map.content : -1,
+  ].filter(idx => idx !== -1))
+
   return rows.slice(1)
     .filter(r => r[map.name] || r[map.sku])
     .map(r => {
       const price = parsePrice(r[map.price])
       const contentRaw = map.content !== null ? String(r[map.content] ?? '').trim() || null : null
       const contentParsed = parseContent(contentRaw)
+      
+      // Capturar columnas extra dinámicamente
+      const extra: Record<string, string> = {}
+      headers.forEach((header, index) => {
+        if (!mappedIndices.has(index) && header && header.trim() !== '') {
+          extra[header.trim()] = String(r[index] ?? '').trim()
+        }
+      })
+
       return {
         name: String(r[map.name] ?? '').trim(),
         sku: String(r[map.sku] ?? '').trim(),
@@ -44,6 +78,7 @@ export function rowsToProducts(rows: string[][], map: ColMapping): RawProduct[] 
         contentRaw,
         contentParsed,
         unitPrice: calcUnitPrice(price, contentParsed),
+        extra,
       }
     })
     .filter(p => p.name || p.sku)
@@ -51,6 +86,58 @@ export function rowsToProducts(rows: string[][], map: ColMapping): RawProduct[] 
 
 function parsePrice(v: unknown): number | null {
   if (v === '' || v == null) return null
-  const n = parseFloat(String(v).replace(/[^0-9,.]/g, '').replace(/\./g, '').replace(',', '.'))
-  return isNaN(n) ? null : n
+  
+  // Si ya es un número, manejarlo de inmediato
+  if (typeof v === 'number') {
+    if (v < 1000) {
+      return v * 1000
+    }
+    return v
+  }
+
+  let str = String(v).trim()
+  if (!str) return null
+
+  // Limpiar caracteres extraños pero mantener números, puntos y comas
+  str = str.replace(/[^0-9,.]/g, '')
+
+  // Identificar el estilo de miles y decimales
+  if (str.includes('.') && str.includes(',')) {
+    const dotIdx = str.indexOf('.')
+    const commaIdx = str.indexOf(',')
+    if (dotIdx < commaIdx) {
+      // Formato colombiano: 34.800,00 -> quitar punto, reemplazar coma con punto
+      str = str.replace(/\./g, '').replace(',', '.')
+    } else {
+      // Formato estadounidense: 34,800.00 -> quitar coma
+      str = str.replace(/,/g, '')
+    }
+  } else if (str.includes(',')) {
+    // Solo tiene coma (ej. 34,800 o 34,8)
+    const parts = str.split(',')
+    if (parts[1].length === 3) {
+      // Parece miles (ej. 34,800) -> quitar coma
+      str = str.replace(/,/g, '')
+    } else {
+      // Parece decimal (ej. 34,8) -> reemplazar coma por punto
+      str = str.replace(',', '.')
+    }
+  } else if (str.includes('.')) {
+    // Solo tiene punto (ej. 34.800 o 34.8)
+    const parts = str.split('.')
+    if (parts[1].length === 3) {
+      // Parece miles (ej. 34.800) -> quitar punto
+      str = str.replace(/\./g, '')
+    }
+  }
+
+  let n = parseFloat(str)
+  if (isNaN(n)) return null
+
+  // Corrección si se importó como decimal de miles (ej. 34.8 -> 34800, o 13 -> 13000)
+  if (n < 1000) {
+    n = n * 1000
+  }
+
+  return n
 }

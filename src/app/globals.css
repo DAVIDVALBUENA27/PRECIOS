@@ -82,6 +82,90 @@
   color: #555;
 }
 
+/* Estilos para etiquetas agrupadas de doble columna */
+.print-tag .tag-logo-small {
+  width: 5mm;
+  height: 5mm;
+  object-fit: contain;
+}
+
+.print-tag .tag-name-grouped {
+  font-size: 10px;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Permitir 2 líneas en modo agrupado */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+  font-weight: 900;
+  margin-top: 0.5mm;
+  margin-bottom: 0.5mm;
+}
+
+/* Modo: doble-independiente (2 productos con línea de corte) */
+.print-tag.tag-double-independent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 1.5mm 1.5mm;
+  gap: 0;
+  position: relative;
+}
+
+/* Línea de corte vertical central */
+.print-tag.tag-double-independent::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 0.5pt dashed #ccc;
+  z-index: 10;
+}
+
+.mini-tag-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  height: 100%;
+  padding: 0 1mm;
+  overflow: hidden;
+}
+
+.mini-tag-col .mini-lab {
+  font-size: 5.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.mini-tag-col .mini-name {
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+  margin: 0.5mm 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mini-tag-col .mini-price {
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+  margin: 0.5mm 0;
+}
+
+.mini-tag-col .mini-details {
+  font-size: 5px;
+  color: #555;
+  line-height: 1.1;
+  width: 100%;
+}
+
 @media print {
   body * {
     visibility: hidden;
