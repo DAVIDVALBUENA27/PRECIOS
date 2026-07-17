@@ -18,10 +18,12 @@ export interface LabelStyle {
   priceFontSize: number
   skuFontSize: number
   labFontSize: number
+  extraFontSize: number  // ← columnas dinámicas del CSV
   // Colores de texto
   nameColor: string
   priceColor: string
   skuColor: string
+  extraColor: string    // ← columnas dinámicas del CSV
 }
 
 export const DEFAULT_STYLE: LabelStyle = {
@@ -33,9 +35,11 @@ export const DEFAULT_STYLE: LabelStyle = {
   priceFontSize: 26,
   skuFontSize: 7,
   labFontSize: 7,
+  extraFontSize: 6,
   nameColor: '#000000',
   priceColor: '#000000',
   skuColor: '#555555',
+  extraColor: '#666666',
 }
 
 interface Props {
@@ -44,11 +48,10 @@ interface Props {
 }
 
 function Slider({
-  label, value, min, max, step = 0.5, unit = 'px',
-  onChange,
+  label, value, min, max, step = 0.5, unit = 'px', onChange,
 }: {
-  label: string; value: number; min: number; max: number; step?: number; unit?: string
-  onChange: (v: number) => void
+  label: string; value: number; min: number; max: number
+  step?: number; unit?: string; onChange: (v: number) => void
 }) {
   return (
     <label className="flex flex-col gap-0.5">
@@ -86,11 +89,10 @@ export function LabelStylePanel({ style, onChange }: Props) {
     onChange({ ...style, [key]: val })
   }
 
-  function reset() {
-    onChange(DEFAULT_STYLE)
-  }
-
-  const presetColors = ['#ffffff', '#FFFDE7', '#FFF9C4', '#E3F2FD', '#FCE4EC', '#F3E5F5', '#E8F5E9', '#FFF3E0']
+  const presetColors = [
+    '#ffffff', '#FFFDE7', '#FFF9C4', '#FFCC00',
+    '#E3F2FD', '#FCE4EC', '#F3E5F5', '#E8F5E9',
+  ]
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white print:hidden">
@@ -112,12 +114,10 @@ export function LabelStylePanel({ style, onChange }: Props) {
           {/* ── Fondo ── */}
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Fondo del ticket</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {presetColors.map((c) => (
                 <button
-                  key={c}
-                  type="button"
-                  title={c}
+                  key={c} type="button" title={c}
                   onClick={() => set('bgColor', c)}
                   className={`h-7 w-7 rounded border-2 transition-transform hover:scale-110 ${
                     style.bgColor === c ? 'border-blue-500 scale-110' : 'border-gray-300'
@@ -134,11 +134,11 @@ export function LabelStylePanel({ style, onChange }: Props) {
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Borde</p>
             <div className="flex flex-wrap gap-4 items-end">
               <ColorPick label="Color" value={style.borderColor} onChange={(v) => set('borderColor', v)} />
-              <div className="w-40">
+              <div className="w-36">
                 <Slider label="Grosor" value={style.borderWidth} min={0} max={3} step={0.25} unit="pt"
                   onChange={(v) => set('borderWidth', v)} />
               </div>
-              <div className="w-40">
+              <div className="w-36">
                 <Slider label="Esquinas" value={style.borderRadius} min={0} max={5} step={0.5} unit="mm"
                   onChange={(v) => set('borderRadius', v)} />
               </div>
@@ -148,7 +148,7 @@ export function LabelStylePanel({ style, onChange }: Props) {
           {/* ── Tamaños de fuente ── */}
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Tamaño de fuentes</p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
               <Slider label="Nombre" value={style.nameFontSize} min={7} max={14} step={0.5}
                 onChange={(v) => set('nameFontSize', v)} />
               <Slider label="Precio" value={style.priceFontSize} min={16} max={40} step={1}
@@ -157,6 +157,8 @@ export function LabelStylePanel({ style, onChange }: Props) {
                 onChange={(v) => set('skuFontSize', v)} />
               <Slider label="Laboratorio" value={style.labFontSize} min={5} max={12} step={0.5}
                 onChange={(v) => set('labFontSize', v)} />
+              <Slider label="Campos extra" value={style.extraFontSize} min={4} max={11} step={0.5}
+                onChange={(v) => set('extraFontSize', v)} />
             </div>
           </div>
 
@@ -167,13 +169,14 @@ export function LabelStylePanel({ style, onChange }: Props) {
               <ColorPick label="Nombre" value={style.nameColor} onChange={(v) => set('nameColor', v)} />
               <ColorPick label="Precio" value={style.priceColor} onChange={(v) => set('priceColor', v)} />
               <ColorPick label="SKU / Barras" value={style.skuColor} onChange={(v) => set('skuColor', v)} />
+              <ColorPick label="Campos extra" value={style.extraColor} onChange={(v) => set('extraColor', v)} />
             </div>
           </div>
 
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={reset}
+              onClick={() => onChange(DEFAULT_STYLE)}
               className="text-xs text-gray-400 hover:text-gray-700 underline"
             >
               Restablecer por defecto

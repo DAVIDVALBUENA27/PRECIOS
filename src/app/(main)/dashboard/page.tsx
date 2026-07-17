@@ -50,9 +50,38 @@ export default function DashboardPage() {
     void init()
   }, [])
 
+  // Ordenamiento de la tabla de revisión
+  type SortOrder = 'default' | 'alpha' | 'changed' | 'price-up' | 'price-down'
+  const [sortOrder, setSortOrder] = useState<SortOrder>('changed')
+
   const labs = useMemo(() => Array.from(new Set(products.map((p) => p.lab))).sort(), [products])
   const labColors = useLabColors(products.map((p) => p.lab))
-  const filtered = activeLab ? products.filter((p) => p.lab === activeLab) : products
+
+  const filtered = useMemo(() => {
+    const base = activeLab ? products.filter((p) => p.lab === activeLab) : products
+    const arr = [...base]
+    switch (sortOrder) {
+      case 'alpha':
+        return arr.sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      case 'changed':
+        return arr.sort((a, b) => Number(b.changed) - Number(a.changed))
+      case 'price-up':
+        return arr.sort((a, b) => {
+          const aUp = a.changed && a.oldPrice !== null && a.price !== null && a.price > a.oldPrice
+          const bUp = b.changed && b.oldPrice !== null && b.price !== null && b.price > b.oldPrice
+          return Number(bUp) - Number(aUp)
+        })
+      case 'price-down':
+        return arr.sort((a, b) => {
+          const aDown = a.changed && a.oldPrice !== null && a.price !== null && a.price < a.oldPrice
+          const bDown = b.changed && b.oldPrice !== null && b.price !== null && b.price < b.oldPrice
+          return Number(bDown) - Number(aDown)
+        })
+      default:
+        return arr
+    }
+  }, [products, activeLab, sortOrder])
+
   const selectedProducts = products.filter((p) => p.selected)
 
   const changedCount = products.filter((p) => p.changed).length
@@ -208,6 +237,30 @@ export default function DashboardPage() {
           />
 
           <LabChips labs={labs} labColors={labColors} activeLab={activeLab} onSelect={setActiveLab} />
+
+          {/* Ordenamiento */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ordenar:</span>
+            {([
+              ['default',    'Por defecto'],
+              ['alpha',      'A → Z'],
+              ['changed',    '🔄 Cambiaron primero'],
+              ['price-up',   '▲ Subieron primero'],
+              ['price-down', '▼ Bajaron primero'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key} type="button"
+                onClick={() => setSortOrder(key)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  sortOrder === key
+                    ? 'border-blue-600 bg-blue-600 text-white'
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-blue-400 hover:text-blue-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           <ProductTable
             products={filtered}
