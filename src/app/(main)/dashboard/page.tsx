@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import {
   UploadZone,
   ColMapper,
@@ -13,6 +13,11 @@ import { ProductWithDiff, RawProduct } from '@/features/labels/types'
 import { compareWithSnapshot } from '@/features/labels/lib/compareProducts'
 import { useLabColors } from '@/features/labels/hooks/useLabColors'
 import { DEMO_DAY1, DEMO_DAY2 } from '@/features/labels/lib/demoData'
+import {
+  loadLastSnapshot,
+  saveSnapshot,
+  getSnapshotCount,
+} from '@/features/labels/services/snapshotService'
 
 type Step = 'upload' | 'mapping' | 'review' | 'preview'
 
@@ -23,13 +28,37 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductWithDiff[]>([])
   const [activeLab, setActiveLab] = useState<string | null>(null)
 
+  // Historial de precios
+  const [lastSnapshot, setLastSnapshot] = useState<RawProduct[]>([])
+  const [snapshotLoaded, setSnapshotLoaded] = useState(false)
+  const [isFirstUpload, setIsFirstUpload] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Cargar el snapshot previo al montar (si el usuario está logueado)
+  useEffect(() => {
+    async function init() {
+      try {
+        const [count, snap] = await Promise.all([getSnapshotCount(), loadLastSnapshot()])
+        setIsFirstUpload(count === 0)
+        setLastSnapshot(snap)
+      } catch {
+        // Si no hay sesión activa simplemente no hay historial
+      } finally {
+        setSnapshotLoaded(true)
+      }
+    }
+    void init()
+  }, [])
+
   const labs = useMemo(() => Array.from(new Set(products.map((p) => p.lab))).sort(), [products])
   const labColors = useLabColors(products.map((p) => p.lab))
   const filtered = activeLab ? products.filter((p) => p.lab === activeLab) : products
   const selectedProducts = products.filter((p) => p.selected)
 
+  const changedCount = products.filter((p) => p.changed).length
+  const newCount = products.filter((p) => p.oldPrice === null && !isFirstUpload).length
+
   function startReview(today: RawProduct[], snapshot: RawProduct[]) {
-    // Preselección automática de los que cambiaron de precio (regla de negocio 8)
     const diffed = compareWithSnapshot(today, snapshot).map((p) => ({ ...p, selected: p.changed }))
     setProducts(diffed)
     setActiveLab(null)
@@ -47,10 +76,23 @@ export default function DashboardPage() {
     startReview(DEMO_DAY2, DEMO_DAY1)
   }
 
-  function handleConfirm(parsed: RawProduct[]) {
-    // Sin snapshot previo todavía (llega en Fase 5): comparación contra vacío
-    startReview(parsed, [])
-  }
+  const handleConfirm = useCallback(async (parsed: RawProduct[]) => {
+    // Comparar con el último snapshot cargado (o vacío si es primera vez)
+    startReview(parsed, lastSnapshot)
+
+    // Guardar en Supabase en segundo plano
+    setSaving(true)
+    try {
+      await saveSnapshot(parsed)
+      // Refrescar para que la próxima carga tenga el snapshot actualizado
+      setLastSnapshot(parsed)
+      setIsFirstUpload(false)
+    } catch (err) {
+      console.error('Error al guardar snapshot:', err)
+    } finally {
+      setSaving(false)
+    }
+  }, [lastSnapshot])
 
   function toggleProduct(sku: string) {
     setProducts((ps) => ps.map((p) => (p.sku === sku ? { ...p, selected: !p.selected } : p)))
@@ -71,6 +113,24 @@ export default function DashboardPage() {
               Sube el listado de productos de tu sistema para generar las etiquetas
             </p>
           </div>
+
+          {/* Banner primera carga */}
+          {snapshotLoaded && isFirstUpload && (
+            <div className="mx-auto mb-6 max-w-xl rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+              <strong>Primera carga</strong> — Sube tu listado de precios. A partir de la segunda subida
+              el sistema comparará automáticamente y marcará los que subieron o bajaron de precio. 📊
+            </div>
+          )}
+
+          {/* Banner historial activo */}
+          {snapshotLoaded && !isFirstUpload && lastSnapshot.length > 0 && (
+            <div className="mx-auto mb-6 max-w-xl rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+              ✅ <strong>Historial activo</strong> — Al subir, compararemos con{' '}
+              <strong>{lastSnapshot.length} productos</strong> del último listado guardado y marcaremos
+              los cambios de precio automáticamente.
+            </div>
+          )}
+
           <UploadZone onRows={handleRows} onDemo={handleDemo} />
         </>
       )}
@@ -89,7 +149,10 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Revisa y selecciona</h1>
-              <p className="mt-1 text-sm text-gray-500">{fileName}</p>
+              <p className="mt-1 text-sm text-gray-500 flex items-center gap-2">
+                {fileName}
+                {saving && <span className="text-xs text-blue-500 animate-pulse">Guardando historial…</span>}
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <button
@@ -110,9 +173,37 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Badges de cambios */}
+          {!isFirstUpload && (changedCount > 0 || newCount > 0) && (
+            <div className="flex flex-wrap gap-3">
+              {changedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Seleccionar solo los que cambiaron
+                    setProducts((ps) => ps.map((p) => ({ ...p, selected: p.changed })))
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
+                >
+                  🔄 {changedCount} con cambio de precio — clic para seleccionar solo estos
+                </button>
+              )}
+              {newCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  🆕 {newCount} productos nuevos (no estaban en el listado anterior)
+                </span>
+              )}
+              {changedCount === 0 && newCount === 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500">
+                  ✅ Sin cambios de precio respecto al listado anterior
+                </span>
+              )}
+            </div>
+          )}
+
           <SummaryBar
             total={products.length}
-            changed={products.filter((p) => p.changed).length}
+            changed={changedCount}
             selected={selectedProducts.length}
           />
 
