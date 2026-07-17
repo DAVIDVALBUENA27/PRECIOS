@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { ProductWithDiff } from '@/features/labels/types'
 import { formatUnitPrice } from '@/features/labels/lib/unitPrice'
 import { LabColor } from '@/features/labels/hooks/useLabColors'
 
 type PaperSize = 'carta' | 'oficio'
 
-/* margin vertical calculado para que quepan filas completas de 36mm */
+/* margin vertical calculado para que quepan filas completas de 40mm */
 const PAPER: Record<PaperSize, { label: string; page: string; margin: string; perSheet: number }> = {
-  carta: { label: 'Carta (14 por hoja)', page: 'letter', margin: '13.7mm 8mm', perSheet: 14 },
-  oficio: { label: 'Oficio (16 por hoja)', page: '216mm 330mm', margin: '21mm 8mm', perSheet: 16 },
+  carta: { label: 'Carta (12 por hoja)', page: 'letter', margin: '19.7mm 8mm', perSheet: 12 },
+  oficio: { label: 'Oficio (14 por hoja)', page: '216mm 330mm', margin: '25mm 8mm', perSheet: 14 },
 }
 
 interface PrintPreviewProps {
@@ -45,6 +45,15 @@ export type PrintMode = 'individual' | 'agrupado-tamanos' | 'doble-independiente
 export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPreviewProps) {
   const [paper, setPaper] = useState<PaperSize>('carta')
   const [printMode, setPrintMode] = useState<PrintMode>('individual')
+
+  // Drag & drop — orden de productos en modo doble-independiente
+  const [dndOrder, setDndOrder] = useState<number[]>(() => products.map((_, i) => i))
+  const draggingRef = useRef<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
+
+  useEffect(() => {
+    setDndOrder(products.map((_, i) => i))
+  }, [products])
 
   // Extraer todas las columnas extra disponibles (excluyendo código de barras que ya manejamos de forma estándar)
   const allExtraFields = useMemo(() => {
@@ -89,10 +98,13 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
     }
 
     if (printMode === 'doble-independiente') {
-      // Tomar la lista y juntarlos de 2 en 2 sin importar el nombre para aprovechar papel
+      // Usar orden DnD; fallback si aún no sincronizó
+      const orderedProds = dndOrder.length === products.length
+        ? dndOrder.map((i) => products[i])
+        : products
       const list: { isGrouped: boolean; isIndependentDouble: boolean; baseName: string; products: ProductWithDiff[] }[] = []
-      for (let i = 0; i < products.length; i += 2) {
-        const chunk = products.slice(i, i + 2)
+      for (let i = 0; i < orderedProds.length; i += 2) {
+        const chunk = orderedProds.slice(i, i + 2)
         list.push({
           isGrouped: false,
           isIndependentDouble: true,
@@ -136,7 +148,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
       }
     })
     return list
-  }, [products, printMode])
+  }, [products, printMode, dndOrder])
 
   const sheets = Math.ceil(tagsToPrint.length / PAPER[paper].perSheet)
 
@@ -283,10 +295,17 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
         </div>
       </div>
 
-      <p className="mb-6 text-xs text-gray-500 print:hidden">
+      <p className="mb-3 text-xs text-gray-500 print:hidden">
         En el diálogo de impresión usa <strong>escala 100%</strong> (no &quot;ajustar a página&quot;) para que
-        cada etiqueta mida exactamente 8 × 3.6 cm.
+        cada etiqueta mida exactamente 8 × 4 cm.
       </p>
+
+      {printMode === 'doble-independiente' && (
+        <p className="mb-4 flex items-center gap-1.5 text-xs text-blue-600 font-medium print:hidden">
+          <span>⠿</span>
+          <span>Arrastra cualquier media-etiqueta para reordenarlas antes de imprimir</span>
+        </p>
+      )}
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-100 p-6 print:overflow-visible print:rounded-none print:border-0 print:bg-white print:p-0">
         <div id="print-area" className="print-grid mx-auto w-fit bg-white shadow-sm print:shadow-none">
@@ -374,7 +393,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
                         <div key={p.sku} className={`flex flex-col justify-between text-center items-center ${subIdx === 0 ? 'border-r border-gray-100 pr-1' : 'pl-1'}`}>
                           <span className="font-extrabold text-[8px] text-blue-700">{size || p.contentRaw || 'OPC'}</span>
                           
-                          <span className="text-[13px] font-black text-gray-900 my-0.5">
+                          <span className="text-[16px] font-black text-gray-900 my-0.5">
                             {p.price !== null
                               ? `$${p.price.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                               : '—'}
@@ -409,6 +428,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
               return (
                 <div key={`double-indep-${tagIdx}`} className="print-tag tag-double-independent">
                   {tag.products.map((p, subIdx) => {
+                    const flatIdx = tagIdx * 2 + subIdx
                     const color = labColors.get(p.lab)
                     const unitPrice = formatUnitPrice(p.unitPrice, p.contentParsed?.normalizedUnit ?? null)
                     const barcode = getBarcode(p)
@@ -419,7 +439,29 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
                       .map((f) => p.extra?.[f])
 
                     return (
-                      <div key={p.sku} className="mini-tag-col">
+                      <div
+                        key={p.sku}
+                        className={`mini-tag-col ${dragOver === flatIdx ? 'dnd-over' : ''} ${draggingRef.current === flatIdx ? 'dnd-dragging' : ''}`}
+                        draggable
+                        onDragStart={() => { draggingRef.current = flatIdx }}
+                        onDragOver={(e) => { e.preventDefault(); setDragOver(flatIdx) }}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const from = draggingRef.current
+                          if (from === null || from === flatIdx) { setDragOver(null); return }
+                          setDndOrder((prev) => {
+                            const next = [...prev]
+                            const tmp = next[from]
+                            next[from] = next[flatIdx]
+                            next[flatIdx] = tmp
+                            return next
+                          })
+                          draggingRef.current = null
+                          setDragOver(null)
+                        }}
+                        onDragEnd={() => { draggingRef.current = null; setDragOver(null) }}
+                      >
                         <div className="w-full flex justify-between items-center text-[5.5px]">
                           {visibleFields.lab && (
                             <span className="mini-lab truncate max-w-[25px]" style={color ? { color: color.fg } : undefined}>
@@ -454,7 +496,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
                       </div>
                     )
                   })}
-                  
+
                   {tag.products.length === 1 && (
                     <div className="mini-tag-col flex items-center justify-center text-[7px] text-gray-300 italic">
                       Vacío

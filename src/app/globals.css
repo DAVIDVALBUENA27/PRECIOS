@@ -5,19 +5,19 @@
  * Documentación: https://tailwindcss.com/docs/theme
  */
 
-/* ===== Etiquetas de góndola: 80mm × 36mm, 2 columnas ===== */
+/* ===== Etiquetas de góndola: 80mm × 40mm, 2 columnas ===== */
 
 .print-grid {
   display: grid;
   grid-template-columns: 80mm 80mm;
-  grid-auto-rows: 36mm;
+  grid-auto-rows: 40mm;
   gap: 0;
 }
 
 .print-tag {
   position: relative;
   width: 80mm;
-  height: 36mm;
+  height: 40mm;
   border: 0.5pt solid #999;
   padding: 2.5mm 3mm;
   display: flex;
@@ -71,7 +71,7 @@
 }
 
 .print-tag .tag-price {
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 900;
   letter-spacing: -0.5px;
 }
@@ -153,10 +153,29 @@
 }
 
 .mini-tag-col .mini-price {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   color: #000;
   margin: 0.5mm 0;
+}
+
+/* Drag & drop (modo doble-independiente) */
+.mini-tag-col[draggable="true"] {
+  cursor: grab;
+}
+.mini-tag-col[draggable="true"]:active {
+  cursor: grabbing;
+}
+.mini-tag-col.dnd-dragging {
+  opacity: 0.35;
+}
+.mini-tag-col.dnd-over {
+  outline: 2px dashed #3b82f6;
+  outline-offset: -2px;
+}
+@media print {
+  .mini-tag-col[draggable="true"] { cursor: default; }
+  .mini-tag-col.dnd-over { outline: none; }
 }
 
 .mini-tag-col .mini-details {
