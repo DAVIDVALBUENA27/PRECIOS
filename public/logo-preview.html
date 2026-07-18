@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Logo Concepts — Etiquetas Góndola</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #F8FAFC; padding: 48px; }
+  h1 { font-size: 14px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .card {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    padding: 48px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card h2 { font-size: 13px; font-weight: 600; color: #0F172A; }
+  .card p { font-size: 12px; color: #64748B; text-align: center; line-height: 1.5; }
+  .sizes { display: flex; align-items: center; gap: 20px; }
+  .label { font-size: 10px; color: #94A3B8; text-align: center; }
+  .dark-bg {
+    background: #0F172A;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .divider { height: 1px; background: #E2E8F0; width: 100%; }
+  .nav-preview {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 40px;
+  }
+  .nav-preview span { font-size: 14px; font-weight: 600; color: #0F172A; }
+</style>
+</head>
+<body>
+
+<h1>Opciones de Logo — Etiquetas Góndola</h1>
+
+<div class="grid">
+
+  <!-- OPCIÓN A: Price Tag Clásica -->
+  <div class="card">
+    <div class="sizes">
+      <!-- 64px -->
+      <div>
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <!-- Tag shape inside -->
+          <path d="M7 9 L7 24 Q7 25 8 25 L24 25 Q25 25 25 24 L25 11 L21 7 L8 7 Q7 7 7 8 Z" fill="white" fill-opacity="0.08"/>
+          <!-- Fold corner -->
+          <path d="M21 7 L25 11 L21 11 Z" fill="white" fill-opacity="0.15"/>
+          <!-- Price line (blue) -->
+          <rect x="9" y="17" width="14" height="2.5" rx="1.25" fill="#2563EB"/>
+          <!-- Name lines -->
+          <rect x="9" y="12" width="9" height="1.5" rx="0.75" fill="white" fill-opacity="0.4"/>
+          <rect x="9" y="21" width="7" height="1.5" rx="0.75" fill="white" fill-opacity="0.25"/>
+        </svg>
+        <div class="label" style="margin-top:8px">64px</div>
+      </div>
+      <!-- 32px -->
+      <div>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <path d="M7 9 L7 24 Q7 25 8 25 L24 25 Q25 25 25 24 L25 11 L21 7 L8 7 Q7 7 7 8 Z" fill="white" fill-opacity="0.08"/>
+          <path d="M21 7 L25 11 L21 11 Z" fill="white" fill-opacity="0.15"/>
+          <rect x="9" y="17" width="14" height="2.5" rx="1.25" fill="#2563EB"/>
+          <rect x="9" y="12" width="9" height="1.5" rx="0.75" fill="white" fill-opacity="0.4"/>
+          <rect x="9" y="21" width="7" height="1.5" rx="0.75" fill="white" fill-opacity="0.25"/>
+        </svg>
+        <div class="label" style="margin-top:8px">32px</div>
+      </div>
+      <!-- 20px -->
+      <div>
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <path d="M7 9 L7 24 Q7 25 8 25 L24 25 Q25 25 25 24 L25 11 L21 7 L8 7 Q7 7 7 8 Z" fill="white" fill-opacity="0.08"/>
+          <path d="M21 7 L25 11 L21 11 Z" fill="white" fill-opacity="0.15"/>
+          <rect x="9" y="17" width="14" height="2.5" rx="1.25" fill="#2563EB"/>
+          <rect x="9" y="12" width="9" height="1.5" rx="0.75" fill="white" fill-opacity="0.4"/>
+          <rect x="9" y="21" width="7" height="1.5" rx="0.75" fill="white" fill-opacity="0.25"/>
+        </svg>
+        <div class="label" style="margin-top:8px">20px</div>
+      </div>
+    </div>
+    <h2>A — Ticket de Precio</h2>
+    <p>Forma clásica de ticket con esquina doblada y línea de precio en azul. Reconocible en cualquier nicho de retail.</p>
+  </div>
+
+  <!-- OPCIÓN B: Etiqueta Colgante -->
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <!-- Tag body -->
+          <rect x="7" y="10" width="18" height="17" rx="2.5" fill="white" fill-opacity="0.1"/>
+          <!-- Tab/string at top center -->
+          <rect x="13" y="5" width="6" height="8" rx="3" fill="white" fill-opacity="0.2"/>
+          <!-- Hole -->
+          <circle cx="16" cy="8" r="1.5" fill="#0F172A"/>
+          <!-- Price highlight -->
+          <rect x="9" y="19" width="14" height="3" rx="1.5" fill="#2563EB"/>
+          <!-- Lines above -->
+          <rect x="9" y="13" width="8" height="1.5" rx="0.75" fill="white" fill-opacity="0.35"/>
+          <rect x="9" y="16" width="11" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+        </svg>
+        <div class="label" style="margin-top:8px">64px</div>
+      </div>
+      <div>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <rect x="7" y="10" width="18" height="17" rx="2.5" fill="white" fill-opacity="0.1"/>
+          <rect x="13" y="5" width="6" height="8" rx="3" fill="white" fill-opacity="0.2"/>
+          <circle cx="16" cy="8" r="1.5" fill="#0F172A"/>
+          <rect x="9" y="19" width="14" height="3" rx="1.5" fill="#2563EB"/>
+          <rect x="9" y="13" width="8" height="1.5" rx="0.75" fill="white" fill-opacity="0.35"/>
+          <rect x="9" y="16" width="11" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+        </svg>
+        <div class="label" style="margin-top:8px">32px</div>
+      </div>
+      <div>
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <rect x="7" y="10" width="18" height="17" rx="2.5" fill="white" fill-opacity="0.1"/>
+          <rect x="13" y="5" width="6" height="8" rx="3" fill="white" fill-opacity="0.2"/>
+          <circle cx="16" cy="8" r="1.5" fill="#0F172A"/>
+          <rect x="9" y="19" width="14" height="3" rx="1.5" fill="#2563EB"/>
+          <rect x="9" y="13" width="8" height="1.5" rx="0.75" fill="white" fill-opacity="0.35"/>
+        </svg>
+        <div class="label" style="margin-top:8px">20px</div>
+      </div>
+    </div>
+    <h2>B — Etiqueta Colgante</h2>
+    <p>Etiqueta que cuelga del borde de la góndola. Más fiel al concepto de "gondola label" que usan los supermercados.</p>
+  </div>
+
+  <!-- OPCIÓN C: Gondola Shelf -->
+  <div class="card">
+    <div class="sizes">
+      <div>
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <!-- 3 price tags in a shelf row -->
+          <!-- Tag 1 -->
+          <rect x="5" y="11" width="6" height="8" rx="1.5" fill="#2563EB"/>
+          <rect x="5" y="16" width="6" height="1" rx="0.5" fill="white" fill-opacity="0.6"/>
+          <!-- Tag 2 -->
+          <rect x="13" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.15"/>
+          <rect x="13" y="16" width="6" height="1" rx="0.5" fill="#2563EB" fill-opacity="0.8"/>
+          <!-- Tag 3 -->
+          <rect x="21" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.08"/>
+          <rect x="21" y="16" width="6" height="1" rx="0.5" fill="white" fill-opacity="0.3"/>
+          <!-- Shelf line -->
+          <rect x="3" y="20" width="26" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+          <!-- Bottom detail -->
+          <rect x="5" y="23" width="4" height="3" rx="0.5" fill="white" fill-opacity="0.08"/>
+          <rect x="13" y="23" width="4" height="3" rx="0.5" fill="white" fill-opacity="0.08"/>
+          <rect x="21" y="23" width="4" height="3" rx="0.5" fill="white" fill-opacity="0.08"/>
+        </svg>
+        <div class="label" style="margin-top:8px">64px</div>
+      </div>
+      <div>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <rect x="5" y="11" width="6" height="8" rx="1.5" fill="#2563EB"/>
+          <rect x="5" y="16" width="6" height="1" rx="0.5" fill="white" fill-opacity="0.6"/>
+          <rect x="13" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.15"/>
+          <rect x="13" y="16" width="6" height="1" rx="0.5" fill="#2563EB" fill-opacity="0.8"/>
+          <rect x="21" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.08"/>
+          <rect x="21" y="16" width="6" height="1" rx="0.5" fill="white" fill-opacity="0.3"/>
+          <rect x="3" y="20" width="26" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+        </svg>
+        <div class="label" style="margin-top:8px">32px</div>
+      </div>
+      <div>
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#0F172A"/>
+          <rect x="5" y="11" width="6" height="8" rx="1.5" fill="#2563EB"/>
+          <rect x="13" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.15"/>
+          <rect x="21" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.08"/>
+          <rect x="3" y="20" width="26" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+        </svg>
+        <div class="label" style="margin-top:8px">20px</div>
+      </div>
+    </div>
+    <h2>C — Góndola (3 etiquetas)</h2>
+    <p>Tres etiquetas en fila sobre una góndola. Evoca directamente el producto: múltiples etiquetas en un estante de tienda.</p>
+  </div>
+
+</div>
+
+  <!-- SECCIÓN DESTACADA: IDEA 2 SELECCIONADA -->
+  <div style="margin-top: 56px; padding: 40px; background: white; border: 2px solid #0F172A; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04);">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+      <span style="background: #0F172A; color: white; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Seleccionado</span>
+      <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0;">Idea 2: El Tag Dinámico (Monocromático & Neutro)</h2>
+    </div>
+    <p style="font-size: 14px; color: #475569; max-width: 800px; margin-bottom: 32px; line-height: 1.6;">
+      Este diseño representa una etiqueta física simplificada al extremo. El corte diagonal superior evoca el concepto clásico de ticket/etiqueta de góndola, mientras que las líneas interiores de diferentes espesores sugieren un código de barras y la estructuración de precios/unidades. Es neutral, limpio y profesional para cualquier nicho.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px;">
+      <!-- Variante Fondo Claro -->
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 32px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+        <h3 style="font-size: 12px; color: #64748B; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Versión Light Mode</h3>
+        
+        <!-- Logo Grande + Marca -->
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <!-- SVG Logo Idea 2 (Tag Dinámico) -->
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Outer Tag Container with Rounded Corners & Angled Top-Right Cut -->
+            <path d="M6 8 C6 6.89543 6.89543 6 8 6 H20 L26 12 V24 C26 25.1046 25.1046 26 24 26 H8 C6.89543 26 6 25.1046 6 24 V8 Z" fill="#0F172A"/>
+            <!-- Diagonal cut shadow detail -->
+            <path d="M20 6 V12 H26 L20 6 Z" fill="white" fill-opacity="0.15"/>
+            <!-- Line 1: Barcode/Title representation -->
+            <rect x="10" y="11" width="6" height="2" rx="1" fill="white" fill-opacity="0.4"/>
+            <!-- Line 2: The Price Line (Thicker, representing value) -->
+            <rect x="10" y="15" width="12" height="3" rx="1.5" fill="white" fill-opacity="0.95"/>
+            <!-- Line 3: Unit Price / Barcode line -->
+            <rect x="10" y="20" width="8" height="2" rx="1" fill="white" fill-opacity="0.25"/>
+          </svg>
+          <span style="font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; font-family: system-ui, sans-serif;">uni<span style="color: #64748B; font-weight: 400;">tag</span></span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 8 C6 6.89543 6.89543 6 8 6 H20 L26 12 V24 C26 25.1046 25.1046 26 24 26 H8 C6.89543 26 6 25.1046 6 24 V8 Z" fill="#0F172A"/>
+            <path d="M20 6 V12 H26 L20 6 Z" fill="white" fill-opacity="0.15"/>
+            <rect x="10" y="11" width="6" height="2" rx="1" fill="white" fill-opacity="0.4"/>
+            <rect x="10" y="15" width="12" height="3" rx="1.5" fill="white" fill-opacity="0.95"/>
+            <rect x="10" y="20" width="8" height="2" rx="1" fill="white" fill-opacity="0.25"/>
+          </svg>
+          <span style="font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; font-family: system-ui, sans-serif;">Tag<span style="color: #64748B; font-weight: 400;">mark</span></span>
+        </div>
+      </div>
+
+      <!-- Variante Fondo Oscuro -->
+      <div style="background: #0F172A; border: 1px solid #1E293B; padding: 32px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+        <h3 style="font-size: 12px; color: #94A3B8; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Versión Dark Mode</h3>
+        
+        <!-- Logo Grande + Marca -->
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <!-- SVG Logo Idea 2 (Tag Dinámico invertido) -->
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 8 C6 6.89543 6.89543 6 8 6 H20 L26 12 V24 C26 25.1046 25.1046 26 24 26 H8 C6.89543 26 6 25.1046 6 24 V8 Z" fill="white" fill-opacity="0.08"/>
+            <path d="M20 6 V12 H26 L20 6 Z" fill="white" fill-opacity="0.15"/>
+            <rect x="10" y="11" width="6" height="2" rx="1" fill="white" fill-opacity="0.4"/>
+            <rect x="10" y="15" width="12" height="3" rx="1.5" fill="white" fill-opacity="0.95"/>
+            <rect x="10" y="20" width="8" height="2" rx="1" fill="white" fill-opacity="0.25"/>
+          </svg>
+          <span style="font-size: 24px; font-weight: 800; color: white; letter-spacing: -0.5px; font-family: system-ui, sans-serif;">uni<span style="color: #94A3B8; font-weight: 400;">tag</span></span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 8 C6 6.89543 6.89543 6 8 6 H20 L26 12 V24 C26 25.1046 25.1046 26 24 26 H8 C6.89543 26 6 25.1046 6 24 V8 Z" fill="white" fill-opacity="0.08"/>
+            <path d="M20 6 V12 H26 L20 6 Z" fill="white" fill-opacity="0.15"/>
+            <rect x="10" y="11" width="6" height="2" rx="1" fill="white" fill-opacity="0.4"/>
+            <rect x="10" y="15" width="12" height="3" rx="1.5" fill="white" fill-opacity="0.95"/>
+            <rect x="10" y="20" width="8" height="2" rx="1" fill="white" fill-opacity="0.25"/>
+          </svg>
+          <span style="font-size: 24px; font-weight: 800; color: white; letter-spacing: -0.5px; font-family: system-ui, sans-serif;">Tag<span style="color: #94A3B8; font-weight: 400;">mark</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Preview en la navbar -->
+<h1 style="margin-top:48px">Como se ve en la barra de navegación</h1>
+
+<div class="nav-preview">
+  <!-- Opción A en nav -->
+  <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="8" fill="#0F172A"/>
+    <path d="M7 9 L7 24 Q7 25 8 25 L24 25 Q25 25 25 24 L25 11 L21 7 L8 7 Q7 7 7 8 Z" fill="white" fill-opacity="0.08"/>
+    <path d="M21 7 L25 11 L21 11 Z" fill="white" fill-opacity="0.15"/>
+    <rect x="9" y="17" width="14" height="2.5" rx="1.25" fill="#2563EB"/>
+    <rect x="9" y="12" width="9" height="1.5" rx="0.75" fill="white" fill-opacity="0.4"/>
+    <rect x="9" y="21" width="7" height="1.5" rx="0.75" fill="white" fill-opacity="0.25"/>
+  </svg>
+  <span>Etiquetas Góndola</span>
+  <span style="font-size:13px;color:#64748B;margin-left:16px;font-weight:400;">Dashboard</span>
+  <span style="font-size:13px;color:#64748B;margin-left:12px;font-weight:400;">Historial</span>
+</div>
+
+<div class="nav-preview" style="margin-top:12px">
+  <!-- Opción B en nav -->
+  <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="8" fill="#0F172A"/>
+    <rect x="7" y="10" width="18" height="17" rx="2.5" fill="white" fill-opacity="0.1"/>
+    <rect x="13" y="5" width="6" height="8" rx="3" fill="white" fill-opacity="0.2"/>
+    <circle cx="16" cy="8" r="1.5" fill="#0F172A"/>
+    <rect x="9" y="19" width="14" height="3" rx="1.5" fill="#2563EB"/>
+    <rect x="9" y="13" width="8" height="1.5" rx="0.75" fill="white" fill-opacity="0.35"/>
+    <rect x="9" y="16" width="11" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+  </svg>
+  <span>Etiquetas Góndola</span>
+  <span style="font-size:13px;color:#64748B;margin-left:16px;font-weight:400;">Dashboard</span>
+  <span style="font-size:13px;color:#64748B;margin-left:12px;font-weight:400;">Historial</span>
+</div>
+
+<div class="nav-preview" style="margin-top:12px">
+  <!-- Opción C en nav -->
+  <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="8" fill="#0F172A"/>
+    <rect x="5" y="11" width="6" height="8" rx="1.5" fill="#2563EB"/>
+    <rect x="5" y="16" width="6" height="1" rx="0.5" fill="white" fill-opacity="0.6"/>
+    <rect x="13" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.15"/>
+    <rect x="13" y="16" width="6" height="1" rx="0.5" fill="#2563EB" fill-opacity="0.8"/>
+    <rect x="21" y="11" width="6" height="8" rx="1.5" fill="white" fill-opacity="0.08"/>
+    <rect x="21" y="16" width="6" height="1" rx="0.5" fill="white" fill-opacity="0.3"/>
+    <rect x="3" y="20" width="26" height="1.5" rx="0.75" fill="white" fill-opacity="0.2"/>
+  </svg>
+  <span>Etiquetas Góndola</span>
+  <span style="font-size:13px;color:#64748B;margin-left:16px;font-weight:400;">Dashboard</span>
+  <span style="font-size:13px;color:#64748B;margin-left:12px;font-weight:400;">Historial</span>
+</div>
+
+<p style="margin-top:32px;font-size:11px;color:#94A3B8;">Abre este archivo en tu navegador para ver las opciones de logo · public/logo-preview.html</p>
+
+</body>
+</html>
