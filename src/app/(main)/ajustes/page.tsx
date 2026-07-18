@@ -111,6 +111,13 @@ export default function AjustesPage() {
                               ÚLTIMO
                             </span>
                           )}
+                          <span className={`rounded px-1.5 py-0.5 text-[9px] font-medium ${
+                            s.source === 'local'
+                              ? 'bg-blue-50 text-blue-600'
+                              : 'bg-purple-50 text-purple-600'
+                          }`}>
+                            {s.source === 'local' ? '💾 Local' : '☁️ Nube'}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center font-mono font-semibold text-gray-700">
