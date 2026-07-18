@@ -133,30 +133,50 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-6 md:p-10">
       {step === 'upload' && (
         <>
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Etiquetas de góndola</h1>
-            <p className="mt-1 text-gray-500">
-              Sube el listado de productos de tu sistema para generar las etiquetas
+          {/* Hero */}
+          <div className="mx-auto mb-8 max-w-xl text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Generador de etiquetas
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Sube tu listado de productos para generar e imprimir etiquetas de góndola
             </p>
           </div>
 
           {/* Banner primera carga */}
           {snapshotLoaded && isFirstUpload && (
-            <div className="mx-auto mb-6 max-w-xl rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-              <strong>Primera carga</strong> — Sube tu listado de precios. A partir de la segunda subida
-              el sistema comparará automáticamente y marcará los que subieron o bajaron de precio. 📊
+            <div className="mx-auto mb-5 max-w-xl rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5">
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">Primera carga</p>
+                  <p className="mt-0.5 text-xs text-blue-700">
+                    A partir de la segunda subida el sistema comparará automáticamente y marcará los que subieron o bajaron de precio.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Banner historial activo */}
           {snapshotLoaded && !isFirstUpload && lastSnapshot.length > 0 && (
-            <div className="mx-auto mb-6 max-w-xl rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-              ✅ <strong>Historial activo</strong> — Al subir, compararemos con{' '}
-              <strong>{lastSnapshot.length} productos</strong> del último listado guardado y marcaremos
-              los cambios de precio automáticamente.
+            <div className="mx-auto mb-5 max-w-xl rounded-xl border border-green-100 bg-green-50 px-4 py-3.5">
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-green-800">Historial activo</p>
+                  <p className="mt-0.5 text-xs text-green-700">
+                    Compararemos con <strong>{lastSnapshot.length.toLocaleString('es-CO')} productos</strong> del último listado guardado y marcaremos los cambios automáticamente.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -174,20 +194,34 @@ export default function DashboardPage() {
       )}
 
       {step === 'review' && (
-        <div className="mx-auto max-w-6xl space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="mx-auto max-w-6xl space-y-5">
+          {/* Header */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Revisa y selecciona</h1>
-              <p className="mt-1 text-sm text-gray-500 flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">
+                Revisa y selecciona
+              </h1>
+              <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
                 {fileName}
-                {saving && <span className="text-xs text-blue-500 animate-pulse">Guardando historial…</span>}
+                {saving && (
+                  <span className="flex items-center gap-1 text-xs text-blue-500">
+                    <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    Guardando…
+                  </span>
+                )}
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setStep('upload')}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
               >
                 ← Cargar otro archivo
               </button>
@@ -195,66 +229,78 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setStep('preview')}
                 disabled={selectedProducts.length === 0}
-                className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Imprimir etiquetas ({selectedProducts.length})
+                Imprimir {selectedProducts.length > 0 ? `(${selectedProducts.length})` : 'etiquetas'}
               </button>
             </div>
           </div>
 
-          {/* Badges de cambios */}
-          {!isFirstUpload && (changedCount > 0 || newCount > 0) && (
-            <div className="flex flex-wrap gap-3">
-              {changedCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Seleccionar solo los que cambiaron
-                    setProducts((ps) => ps.map((p) => ({ ...p, selected: p.changed })))
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
-                >
-                  🔄 {changedCount} con cambio de precio — clic para seleccionar solo estos
-                </button>
-              )}
-              {newCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                  🆕 {newCount} productos nuevos (no estaban en el listado anterior)
-                </span>
-              )}
-              {changedCount === 0 && newCount === 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500">
-                  ✅ Sin cambios de precio respecto al listado anterior
-                </span>
-              )}
-            </div>
-          )}
-
+          {/* Stats cards */}
           <SummaryBar
             total={products.length}
             changed={changedCount}
             selected={selectedProducts.length}
           />
 
+          {/* Badges de cambios */}
+          {!isFirstUpload && (changedCount > 0 || newCount > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {changedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProducts((ps) => ps.map((p) => ({ ...p, selected: p.changed })))
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                  </svg>
+                  {changedCount} con cambio de precio · clic para seleccionar solo estos
+                </button>
+              )}
+              {newCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  {newCount} productos nuevos
+                </span>
+              )}
+              {changedCount === 0 && newCount === 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Sin cambios de precio respecto al listado anterior
+                </span>
+              )}
+            </div>
+          )}
+
           <LabChips labs={labs} labColors={labColors} activeLab={activeLab} onSelect={setActiveLab} />
 
           {/* Ordenamiento */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ordenar:</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Ordenar:
+            </span>
             {([
               ['default',    'Por defecto'],
               ['alpha',      'A → Z'],
-              ['changed',    '🔄 Cambiaron primero'],
+              ['changed',    'Cambiaron primero'],
               ['price-up',   '▲ Subieron primero'],
               ['price-down', '▼ Bajaron primero'],
             ] as const).map(([key, label]) => (
               <button
-                key={key} type="button"
+                key={key}
+                type="button"
                 onClick={() => setSortOrder(key)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   sortOrder === key
-                    ? 'border-blue-600 bg-blue-600 text-white'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-blue-400 hover:text-blue-600'
+                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600'
                 }`}
               >
                 {label}
