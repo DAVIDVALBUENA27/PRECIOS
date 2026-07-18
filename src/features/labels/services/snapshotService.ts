@@ -117,7 +117,7 @@ export async function saveSnapshot(products: RawProduct[]): Promise<void> {
 }
 
 /**
- * Devuelve cuántos snapshots tiene el negocio.
+ * Devuelve cuántos snapshots (filas totales) tiene el negocio.
  * Útil para saber si es "primera carga".
  */
 export async function getSnapshotCount(): Promise<number> {
@@ -129,4 +129,68 @@ export async function getSnapshotCount(): Promise<number> {
     .select('*', { count: 'exact', head: true })
     .eq('business_id', businessId)
   return count ?? 0
+}
+
+export interface SnapshotSummary {
+  date: string        // YYYY-MM-DD
+  productCount: number
+}
+
+/**
+ * Lista todas las fechas de subida con cantidad de productos.
+ * Devuelve las más recientes primero.
+ */
+export async function listSnapshots(): Promise<SnapshotSummary[]> {
+  const businessId = await getBusinessId()
+  if (!businessId) return []
+  const sb = createClient()
+
+  // Traemos las filas y agrupamos en JS (Supabase JS no soporta GROUP BY nativo)
+  const { data, error } = await sb
+    .from('price_snapshots')
+    .select('snapshot_date')
+    .eq('business_id', businessId)
+    .order('snapshot_date', { ascending: false })
+
+  if (error || !data) return []
+
+  const counts: Record<string, number> = {}
+  for (const row of data) {
+    const d = row.snapshot_date as string
+    counts[d] = (counts[d] ?? 0) + 1
+  }
+
+  return Object.entries(counts)
+    .map(([date, productCount]) => ({ date, productCount }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+}
+
+/**
+ * Carga los productos de una fecha específica del historial.
+ */
+export async function loadSnapshotByDate(date: string): Promise<RawProduct[]> {
+  const businessId = await getBusinessId()
+  if (!businessId) return []
+  const sb = createClient()
+  const { data, error } = await sb
+    .from('price_snapshots')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('snapshot_date', date)
+  if (error || !data) return []
+  return data.map(fromDbRow)
+}
+
+/**
+ * Elimina todos los registros de un snapshot por fecha.
+ */
+export async function deleteSnapshot(date: string): Promise<void> {
+  const businessId = await getBusinessId()
+  if (!businessId) return
+  const sb = createClient()
+  await sb
+    .from('price_snapshots')
+    .delete()
+    .eq('business_id', businessId)
+    .eq('snapshot_date', date)
 }
