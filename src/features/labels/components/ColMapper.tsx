@@ -28,7 +28,7 @@ const FIELDS: { key: keyof ColMapping; label: string; required: boolean; hint?: 
   { key: 'sku', label: 'SKU / Código', required: true },
   { key: 'price', label: 'Precio', required: true },
   { key: 'lab', label: 'Laboratorio / Marca', required: false },
-  { key: 'content', label: 'Contenido', required: false, hint: 'Ej: "500 GR", "250 ML". Sin esta columna no se puede mostrar el precio por gramo/mililitro.' },
+  { key: 'content', label: 'Contenido', required: false, hint: 'Ej: "500 GR", "250 ML". Si no mapeas esta columna, intentamos extraerlo del nombre del producto automáticamente.' },
 ]
 
 interface ColMapperProps {

@@ -44,6 +44,29 @@ export function autoDetectColumns(headers: string[]): Partial<ColMapping> {
   return { name, sku, price, lab, content }
 }
 
+/**
+ * Intenta extraer la presentación/contenido directamente del nombre del producto.
+ * Ej: "CERA SQUASH MOLDEADORA MATE 85GRS"  → "85 GRS"
+ *     "COLONIA ARRURRU AZUL 120 ML"         → "120 ML"
+ *     "JAB.INTIMO SALVIA Y CALEND.210ML"    → "210 ML"
+ * Devuelve null si no encuentra ningún patrón de peso/volumen.
+ */
+function extractContentFromName(name: string): string | null {
+  // Alternativas de unidades (coincide con UNIT_ALIASES de unitPrice.ts)
+  const unitPat = [
+    'gr(?:s|amos?)?', 'g(?:ramos?)?',
+    'ml(?:s)?', 'mililitro(?:s)?', 'cc',
+    'kg(?:s)?', 'kilo(?:gramos?)?', 'kilos?',
+    'l(?:ts?|itro(?:s)?)?',
+    'un(?:id(?:ades?)?)?', 'u(?:nidad(?:es?)?)?',
+  ].join('|')
+
+  const regex = new RegExp(`\\b(\\d+(?:[.,]\\d+)?)\\s*(${unitPat})\\b`, 'i')
+  const match = name.match(regex)
+  if (!match) return null
+  return `${match[1]} ${match[2]}`.trim()
+}
+
 export function rowsToProducts(rows: string[][], map: ColMapping, headers: string[]): RawProduct[] {
   const mappedIndices = new Set([
     map.name,
@@ -57,7 +80,14 @@ export function rowsToProducts(rows: string[][], map: ColMapping, headers: strin
     .filter(r => r[map.name] || r[map.sku])
     .map(r => {
       const price = parsePrice(r[map.price])
-      const contentRaw = map.content !== null ? String(r[map.content] ?? '').trim() || null : null
+      const productName = String(r[map.name] ?? '').trim()
+
+      // Contenido: columna mapeada → extracción del nombre → null
+      const contentRaw =
+        map.content !== null
+          ? String(r[map.content] ?? '').trim() || null
+          : extractContentFromName(productName)
+
       const contentParsed = parseContent(contentRaw)
       
       // Capturar columnas extra dinámicamente
@@ -69,7 +99,7 @@ export function rowsToProducts(rows: string[][], map: ColMapping, headers: strin
       })
 
       return {
-        name: String(r[map.name] ?? '').trim(),
+        name: productName,
         sku: String(r[map.sku] ?? '').trim(),
         price,
         lab: map.lab !== null
