@@ -4,20 +4,34 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ProductWithDiff } from '@/features/labels/types'
 import { formatUnitPrice } from '@/features/labels/lib/unitPrice'
 import { LabColor } from '@/features/labels/hooks/useLabColors'
-import { LabelStylePanel, DEFAULT_STYLE, type LabelStyle } from './LabelStylePanel'
+import { LabelStylePanel, DEFAULT_STYLE, type LabelStyle, type PaperSize } from './LabelStylePanel'
 
-type PaperSize = 'carta' | 'oficio'
+// ──────────────────────────────────────────────────────────────
+// Tamaño de papel y cálculo dinámico de filas/columnas
+// ──────────────────────────────────────────────────────────────
 
-/* margin vertical calculado para que quepan filas completas de 40mm */
-const PAPER: Record<PaperSize, { label: string; page: string; margin: string; perSheet: number }> = {
-  carta: { label: 'Carta (12 por hoja)', page: 'letter', margin: '19.7mm 8mm', perSheet: 12 },
-  oficio: { label: 'Oficio (14 por hoja)', page: '216mm 330mm', margin: '25mm 8mm', perSheet: 14 },
+const PAPER_CFG: Record<PaperSize, { page: string; usableW: number; usableH: number; margin: string }> = {
+  carta:  { page: 'letter',      usableW: 200, usableH: 240, margin: '19.7mm 8mm' },
+  oficio: { page: '216mm 330mm', usableW: 200, usableH: 305, margin: '25mm 8mm'   },
 }
+
+function calcGrid(style: LabelStyle) {
+  const cfg = PAPER_CFG[style.paper]
+  const cols = Math.max(1, Math.floor(cfg.usableW / style.labelWidth))
+  const rows = Math.max(1, Math.floor(cfg.usableH / style.labelHeight))
+  const perSheet = cols * rows
+  return { cols, perSheet, ...cfg }
+}
+
+// ──────────────────────────────────────────────────────────────
 
 interface PrintPreviewProps {
   products: ProductWithDiff[]
   labColors: Map<string, LabColor>
   logoUrl?: string | null
+  accentColor?: string
+  taxId?: string | null
+  businessName?: string
   onBack: () => void
 }
 
@@ -56,8 +70,16 @@ function PriceChangeBadge({ p, mini = false }: { p: ProductWithDiff; mini?: bool
 
 export type PrintMode = 'individual' | 'agrupado-tamanos' | 'doble-independiente'
 
-export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPreviewProps) {
-  const [paper, setPaper] = useState<PaperSize>('carta')
+export function PrintPreview({
+  products,
+  labColors,
+  logoUrl,
+  accentColor = '#2563EB',
+  taxId,
+  businessName,
+  onBack,
+}: PrintPreviewProps) {
+  const showFooter = Boolean(taxId)
   const [printMode, setPrintMode] = useState<PrintMode>('individual')
   const [labelStyle, setLabelStyle] = useState<LabelStyle>(DEFAULT_STYLE)
 
@@ -93,6 +115,9 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
   function toggleField(field: string) {
     setVisibleFields((prev) => ({ ...prev, [field]: !prev[field] }))
   }
+
+  // Grid dinámico según estilo
+  const grid = useMemo(() => calcGrid(labelStyle), [labelStyle])
 
   // Agrupación según el modo
   const tagsToPrint = useMemo(() => {
@@ -134,7 +159,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
     return list
   }, [products, printMode, dndOrder])
 
-  const sheets = Math.ceil(tagsToPrint.length / PAPER[paper].perSheet)
+  const sheets = Math.ceil(tagsToPrint.length / grid.perSheet)
 
   // Estilo del ticket base
   const tagStyle: React.CSSProperties = {
@@ -145,7 +170,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
     borderRadius: `${labelStyle.borderRadius}mm`,
   }
 
-  // Estilo de campos extra (columnas dinámicas CSV)
+  // Estilo de campos extra
   const extraStyle: React.CSSProperties = {
     fontSize: `${labelStyle.extraFontSize}px`,
     color: labelStyle.extraColor,
@@ -157,16 +182,32 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
     marginTop: '0.5mm',
   }
 
+  // CSS dinámico: @page, grid y etiqueta, se sobreescribe con los valores actuales
+  const dynamicCSS = `
+    @page {
+      size: ${grid.page};
+      margin: ${grid.margin};
+    }
+    .print-grid {
+      grid-template-columns: repeat(${grid.cols}, ${labelStyle.labelWidth}mm);
+      grid-auto-rows: ${labelStyle.labelHeight}mm;
+    }
+    .print-tag {
+      width: ${labelStyle.labelWidth}mm !important;
+      height: ${labelStyle.labelHeight}mm !important;
+    }
+  `
+
   return (
     <div className="mx-auto max-w-4xl text-gray-900">
-      <style>{`@page { size: ${PAPER[paper].page}; margin: ${PAPER[paper].margin}; }`}</style>
+      <style>{dynamicCSS}</style>
 
       {/* ── Cabecera ── */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vista de impresión</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {tagsToPrint.length} etiquetas · {sheets} hoja{sheets !== 1 ? 's' : ''} tamaño {paper}
+            {tagsToPrint.length} etiquetas · {sheets} hoja{sheets !== 1 ? 's' : ''} {labelStyle.paper} · {labelStyle.labelWidth}×{labelStyle.labelHeight} mm
           </p>
         </div>
         <button type="button" onClick={onBack} className="text-sm text-gray-600 hover:text-gray-900">
@@ -174,33 +215,21 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
         </button>
       </div>
 
-      {/* ── Papel + modo + imprimir ── */}
+      {/* ── Modo de impresión + botón imprimir ── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white p-4 print:hidden">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex gap-2">
-            {(Object.keys(PAPER) as PaperSize[]).map((size) => (
-              <button key={size} type="button" onClick={() => setPaper(size)}
-                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  paper === size ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-300 bg-white text-gray-600 hover:border-gray-500'
-                }`}>
-                {PAPER[size].label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-1">
-            {([
-              ['individual', '1 x Etiqueta'],
-              ['agrupado-tamanos', 'Agrupar Tamaños'],
-              ['doble-independiente', '2 Diferentes (Con Corte)'],
-            ] as const).map(([mode, label]) => (
-              <button key={mode} type="button" onClick={() => setPrintMode(mode)}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  printMode === mode ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-                }`}>
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-1">
+          {([
+            ['individual', '1 × Etiqueta'],
+            ['agrupado-tamanos', 'Agrupar Tamaños'],
+            ['doble-independiente', '2 Diferentes (Con Corte)'],
+          ] as const).map(([mode, label]) => (
+            <button key={mode} type="button" onClick={() => setPrintMode(mode)}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                printMode === mode ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+              }`}>
+              {label}
+            </button>
+          ))}
         </div>
         <button type="button" onClick={() => window.print()}
           disabled={products.length === 0}
@@ -238,13 +267,13 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
         </div>
       </div>
 
-      {/* ── Panel diseño ── */}
+      {/* ── Panel diseño (incluye papel, tamaño y plantillas) ── */}
       <div className="mb-4">
         <LabelStylePanel style={labelStyle} onChange={setLabelStyle} />
       </div>
 
       <p className="mb-3 text-xs text-gray-500 print:hidden">
-        En el diálogo de impresión usa <strong>escala 100%</strong> (no &quot;ajustar a página&quot;) para que cada etiqueta mida exactamente 8 × 4 cm.
+        En el diálogo de impresión usa <strong>escala 100%</strong> (no &quot;ajustar a página&quot;) para que las etiquetas salgan al tamaño exacto configurado.
       </p>
 
       {printMode === 'doble-independiente' && (
@@ -325,6 +354,16 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
                     </div>
                     {visibleFields.priceChange && <PriceChangeBadge p={p} />}
                   </div>
+
+                  {/* Pie de marca: nombre del negocio (acento) + NIT/RUT */}
+                  {showFooter && (
+                    <div style={{ fontSize: '6px', lineHeight: 1.2, marginTop: '1mm' }}>
+                      {businessName && (
+                        <span style={{ fontWeight: 700, color: accentColor }}>{businessName} · </span>
+                      )}
+                      <span style={{ color: '#666' }}>NIT {taxId}</span>
+                    </div>
+                  )}
                 </div>
               )
             }
@@ -430,7 +469,7 @@ export function PrintPreview({ products, labColors, logoUrl, onBack }: PrintPrev
                       }}
                       onDragEnd={() => { draggingRef.current = null; setDragOver(null) }}
                     >
-                      {/* Lab + logo: flex-1 para que el lab tome el espacio disponible */}
+                      {/* Lab + logo */}
                       <div className="w-full flex justify-between items-center gap-0.5 overflow-hidden">
                         {visibleFields.lab && (
                           <span className="mini-lab flex-1 overflow-hidden" style={{
