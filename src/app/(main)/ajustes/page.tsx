@@ -6,6 +6,7 @@ import {
   deleteSnapshot,
   type SnapshotSummary,
 } from '@/features/labels/services/snapshotService'
+import { BusinessProfileForm } from '@/features/business/components'
 
 function formatDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-')
@@ -56,9 +57,20 @@ export default function AjustesPage() {
     <div className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-3xl space-y-8">
 
-        {/* ── Título ── */}
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Historial de precios</h1>
+        {/* ── Mi negocio ── */}
+        <section>
+          <div className="mb-4">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Mi negocio</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Personaliza cómo se ve tu marca en cada etiqueta impresa.
+            </p>
+          </div>
+          <BusinessProfileForm />
+        </section>
+
+        {/* ── Título historial ── */}
+        <div className="border-t border-slate-100 pt-8">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Historial de precios</h2>
           <p className="mt-1 text-sm text-slate-500">
             Cada vez que subes un archivo, el sistema guarda una copia de los precios para comparar cambios.
           </p>
