@@ -18,6 +18,8 @@ import {
   saveSnapshot,
   getSnapshotCount,
 } from '@/features/labels/services/snapshotService'
+import { getProfile } from '@/features/business/services/businessService'
+import type { Business } from '@/features/business/types'
 
 type Step = 'upload' | 'mapping' | 'review' | 'preview'
 
@@ -33,6 +35,16 @@ export default function DashboardPage() {
   const [snapshotLoaded, setSnapshotLoaded] = useState(false)
   const [isFirstUpload, setIsFirstUpload] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Perfil del negocio (logo, color, NIT) para las etiquetas
+  const [business, setBusiness] = useState<Business | null>(null)
+  useEffect(() => {
+    getProfile()
+      .then(setBusiness)
+      .catch(() => {
+        /* sin sesión/negocio: etiquetas sin logo */
+      })
+  }, [])
 
   // Cargar el snapshot previo al montar (si el usuario está logueado)
   useEffect(() => {
@@ -50,15 +62,18 @@ export default function DashboardPage() {
     void init()
   }, [])
 
-  // Ordenamiento de la tabla de revisión
+  // Ordenamiento y búsqueda de la tabla de revisión
   type SortOrder = 'default' | 'alpha' | 'changed' | 'price-up' | 'price-down'
   const [sortOrder, setSortOrder] = useState<SortOrder>('changed')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const labs = useMemo(() => Array.from(new Set(products.map((p) => p.lab))).sort(), [products])
   const labColors = useLabColors(products.map((p) => p.lab))
 
   const filtered = useMemo(() => {
-    const base = activeLab ? products.filter((p) => p.lab === activeLab) : products
+    const q = searchQuery.trim().toLowerCase()
+    const byLab = activeLab ? products.filter((p) => p.lab === activeLab) : products
+    const base = q ? byLab.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)) : byLab
     const arr = [...base]
     switch (sortOrder) {
       case 'alpha':
@@ -281,6 +296,40 @@ export default function DashboardPage() {
 
           <LabChips labs={labs} labColors={labColors} activeLab={activeLab} onSelect={setActiveLab} />
 
+          {/* Buscador */}
+          <div className="relative">
+            <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nombre o SKU…"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 sm:max-w-sm"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Resultado de búsqueda */}
+          {searchQuery.trim() && (
+            <p className="text-xs text-slate-500">
+              {filtered.length === 0
+                ? 'Sin resultados para esa búsqueda.'
+                : `${filtered.length} producto${filtered.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}`}
+            </p>
+          )}
+
           {/* Ordenamiento */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -321,7 +370,10 @@ export default function DashboardPage() {
         <PrintPreview
           products={selectedProducts}
           labColors={labColors}
-          logoUrl={null}
+          logoUrl={business?.logoUrl ?? null}
+          accentColor={business?.accentColor}
+          taxId={business?.taxId ?? null}
+          businessName={business?.name}
           onBack={() => setStep('review')}
         />
       )}
