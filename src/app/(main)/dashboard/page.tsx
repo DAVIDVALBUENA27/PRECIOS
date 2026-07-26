@@ -17,7 +17,15 @@ import {
   loadLastSnapshot,
   saveSnapshot,
   getSnapshotCount,
+  loadResumableList,
 } from '@/features/labels/services/snapshotService'
+import {
+  loadSession,
+  saveSession,
+  clearSession,
+  describeWhen,
+  type WorkSession,
+} from '@/features/labels/services/sessionService'
 import { getProfile } from '@/features/business/services/businessService'
 import type { Business } from '@/features/business/types'
 
@@ -46,8 +54,13 @@ export default function DashboardPage() {
       })
   }, [])
 
+  // Última sesión de trabajo: permite seguir imprimiendo sin volver a subir
+  const [session, setSession] = useState<WorkSession | null>(null)
+  const [resuming, setResuming] = useState(false)
+
   // Cargar el snapshot previo al montar (si el usuario está logueado)
   useEffect(() => {
+    setSession(loadSession())
     async function init() {
       try {
         const [count, snap] = await Promise.all([getSnapshotCount(), loadLastSnapshot()])
@@ -109,6 +122,50 @@ export default function DashboardPage() {
     setStep('review')
   }
 
+  // Guardar la sesión mientras se trabaja, para poder retomarla al volver
+  useEffect(() => {
+    if (products.length === 0) return
+    const id = setTimeout(() => {
+      const current = { fileName, savedAt: new Date().toISOString(), products }
+      saveSession(current)
+      setSession(current)
+    }, 600)
+    return () => clearTimeout(id)
+  }, [products, fileName])
+
+  /** Retoma la última sesión de este equipo, con la selección tal como quedó. */
+  function resumeSession() {
+    if (!session) return
+    setProducts(session.products)
+    setFileName(session.fileName)
+    setActiveLab(null)
+    setStep('review')
+  }
+
+  /** Reabre la última lista guardada en el historial (sirve desde otro equipo). */
+  async function resumeFromHistory() {
+    setResuming(true)
+    try {
+      const last = await loadResumableList()
+      if (!last) return
+      const diffed = compareWithSnapshot(last.products, last.previous)
+      // Si no hay cambios de precio contra el día anterior, se marcan todos
+      // para que reimprimir la lista completa sea inmediato.
+      const anyChanged = diffed.some((p) => p.changed)
+      setProducts(diffed.map((p) => ({ ...p, selected: anyChanged ? p.changed : true })))
+      setFileName(`Lista guardada del ${last.date}`)
+      setActiveLab(null)
+      setStep('review')
+    } finally {
+      setResuming(false)
+    }
+  }
+
+  function discardSession() {
+    clearSession()
+    setSession(null)
+  }
+
   function handleRows(parsedRows: string[][], name: string) {
     setRows(parsedRows)
     setFileName(name)
@@ -160,6 +217,66 @@ export default function DashboardPage() {
               Sube tu listado de productos para generar e imprimir etiquetas de góndola
             </p>
           </div>
+
+          {/* Continuar donde ibas: la lista ya está guardada, no hay que resubirla */}
+          {session && (
+            <div className="mx-auto mb-5 max-w-xl rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">Continúa donde ibas</p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    <span className="font-medium text-slate-700">{session.fileName}</span>
+                    {' · '}
+                    {session.products.length.toLocaleString('es-CO')} productos
+                    {' · '}
+                    {session.products.filter((p) => p.selected).length.toLocaleString('es-CO')} marcados
+                    {' · '}
+                    {describeWhen(session.savedAt)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={resumeSession}
+                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                    >
+                      Seguir imprimiendo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={discardSession}
+                      className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-700"
+                    >
+                      Descartar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sin sesión en este equipo, pero sí hay listas guardadas en el historial */}
+          {!session && snapshotLoaded && lastSnapshot.length > 0 && (
+            <div className="mx-auto mb-5 max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Reabrir la última lista</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Tienes {lastSnapshot.length.toLocaleString('es-CO')} productos guardados. Puedes
+                reimprimir sin volver a subir el archivo.
+              </p>
+              <button
+                type="button"
+                onClick={resumeFromHistory}
+                disabled={resuming}
+                className="mt-3 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-blue-400 hover:text-blue-700 disabled:opacity-50"
+              >
+                {resuming ? 'Abriendo…' : 'Abrir lista guardada'}
+              </button>
+            </div>
+          )}
 
           {/* Banner primera carga */}
           {snapshotLoaded && isFirstUpload && (

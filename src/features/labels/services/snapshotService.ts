@@ -77,6 +77,8 @@ function toDbRow(p: RawProduct, businessId: string) {
     content_qty: p.contentParsed?.normalizedQty ?? null,
     content_unit: p.contentParsed?.normalizedUnit ?? null,
     unit_price: p.unitPrice,
+    // Columnas propias del archivo del negocio (inventario, ubicación…)
+    extra: p.extra && Object.keys(p.extra).length > 0 ? p.extra : null,
   }
 }
 
@@ -96,6 +98,7 @@ function fromDbRow(row: Record<string, unknown>): RawProduct {
         }
       : null,
     unitPrice: row.unit_price !== null ? Number(row.unit_price) : null,
+    extra: (row.extra as Record<string, string> | null) ?? undefined,
   }
 }
 
@@ -270,6 +273,31 @@ export async function loadSnapshotByDate(date: string): Promise<RawProduct[]> {
     .eq('snapshot_date', date)
   if (error || !data) return []
   return data.map(fromDbRow)
+}
+
+export interface ResumableList {
+  /** Productos del último día guardado. */
+  products: RawProduct[]
+  /** Día anterior, para volver a marcar los que cambiaron de precio. */
+  previous: RawProduct[]
+  date: string
+}
+
+/**
+ * Última lista guardada, lista para retomarla sin volver a subir el archivo.
+ * Se usa cuando no hay sesión local (ej: el usuario entra desde otro equipo).
+ */
+export async function loadResumableList(): Promise<ResumableList | null> {
+  const dates = (await listSnapshots()).map((s) => s.date)
+  if (dates.length === 0) return null
+
+  const [products, previous] = await Promise.all([
+    loadSnapshotByDate(dates[0]),
+    dates[1] ? loadSnapshotByDate(dates[1]) : Promise.resolve([]),
+  ])
+  if (products.length === 0) return null
+
+  return { products, previous, date: dates[0] }
 }
 
 /**
