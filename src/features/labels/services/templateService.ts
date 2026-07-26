@@ -6,7 +6,7 @@
  * Plan Básico: solo localStorage. Plan Pro (futuro): sincroniza con Supabase.
  */
 
-import type { LabelStyle } from '@/features/labels/components/LabelStylePanel'
+import { normalizeStyle, type LabelStyle } from '@/features/labels/types/labelStyle'
 
 const STORAGE_KEY = 'gondola_templates_v1'
 
@@ -22,7 +22,12 @@ export function listTemplates(): LabelTemplate[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
-    return JSON.parse(raw) as LabelTemplate[]
+    // normalizeStyle completa las plantillas guardadas antes de que existieran
+    // campos nuevos (logo, colores por columna, etc.).
+    return (JSON.parse(raw) as LabelTemplate[]).map((t) => ({
+      ...t,
+      style: normalizeStyle(t.style),
+    }))
   } catch {
     return []
   }

@@ -29,14 +29,8 @@
   page-break-inside: avoid;
 }
 
-.print-tag .tag-logo {
-  position: absolute;
-  top: 2mm;
-  right: 2.5mm;
-  width: 8mm;
-  height: 8mm;
-  object-fit: contain;
-}
+/* El logo se posiciona en línea desde LogoOverlay (tamaño, posición y
+   opacidad los define el negocio en el panel de diseño). */
 
 .print-tag .tag-lab {
   font-size: 7px;
@@ -85,12 +79,6 @@
 }
 
 /* Estilos para etiquetas agrupadas de doble columna */
-.print-tag .tag-logo-small {
-  width: 5mm;
-  height: 5mm;
-  object-fit: contain;
-}
-
 .print-tag .tag-name-grouped {
   font-size: 10px;
   line-height: 1.15;
