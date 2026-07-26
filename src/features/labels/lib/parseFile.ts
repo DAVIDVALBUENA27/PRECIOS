@@ -3,25 +3,68 @@ import { RawProduct, ColMapping } from '@/features/labels/types'
 import { parseContent, calcUnitPrice } from './unitPrice'
 
 /**
- * Decodifica un CSV respetando su codificación real.
- * Los exports de POS colombianos suelen venir en Windows-1252 (ANSI), no UTF-8:
- * leerlos como UTF-8 rompe los acentos ("Código" → "Có�digo").
+ * Decodifica un CSV probando las codificaciones que usan los POS y Excel,
+ * y se queda con la que produzca texto español creíble.
+ *
+ * Excel guarda CSV en cuatro sabores según la opción elegida:
+ *   "CSV UTF-8"        → utf-8        ("ó" = C3 B3)
+ *   "CSV (delimitado)" → windows-1252 ("ó" = F3)
+ *   "CSV (Macintosh)"  → macintosh    ("ó" = 97)
+ *   "CSV (MS-DOS)"     → cp850        ("ó" = A2)
+ * Leerlos todos como UTF-8 rompe los acentos ("Código" → "C?digo").
  */
+
+// CP850/CP437, tramo 0x80–0xA8: el que trae las letras acentuadas.
+const CP850_HIGH = 'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜø£Ø×ƒáíóúñÑªº¿'
+
+function decodeCp850(bytes: Uint8Array): string {
+  let out = ''
+  for (const b of bytes) {
+    if (b < 0x80) out += String.fromCharCode(b)
+    else if (b <= 0xa8) out += CP850_HIGH[b - 0x80]
+    else out += '�'
+  }
+  return out
+}
+
+/** Acentos y signos que sí esperamos en un archivo en español. */
+const SPANISH_CHARS = new Set([...'áéíóúüñÁÉÍÓÚÜÑ¿¡ºª°€£$%&«»'])
+
+/**
+ * Cuenta los caracteres que delatan una decodificación equivocada:
+ * cualquier símbolo fuera del ASCII que no sea propio del español.
+ */
+function garbageScore(text: string): number {
+  let score = 0
+  for (const ch of text) {
+    const code = ch.codePointAt(0) ?? 0
+    if (code < 0x80) continue
+    if (SPANISH_CHARS.has(ch)) continue
+    score += code === 0xfffd ? 3 : 1
+  }
+  return score
+}
+
 export function decodeCsv(buffer: ArrayBuffer): string {
   const utf8 = new TextDecoder('utf-8').decode(buffer)
-  // El carácter de reemplazo (U+FFFD) delata bytes que no eran UTF-8.
-  const utf8Bad = (utf8.match(/�/g) ?? []).length
-  if (utf8Bad === 0) return utf8
+  // Sin carácter de reemplazo, el archivo era UTF-8 válido: no tocamos nada.
+  if (!utf8.includes('�')) return utf8
 
-  try {
-    const ansi = new TextDecoder('windows-1252').decode(buffer)
-    // Si el archivo SÍ era UTF-8 (con algún byte suelto dañado), forzar
-    // windows-1252 produce mojibake tipo "CÃ³digo": lo detectamos y descartamos.
-    const ansiBad = (ansi.match(/[\u00C3\u00C2][\u0080-\u00BF]/g) ?? []).length
-    return ansiBad < utf8Bad ? ansi : utf8
-  } catch {
-    return utf8
+  const candidates: string[] = [utf8]
+
+  for (const encoding of ['windows-1252', 'macintosh']) {
+    try {
+      candidates.push(new TextDecoder(encoding).decode(buffer))
+    } catch {
+      // Codificación no soportada por el navegador: se ignora.
+    }
   }
+  candidates.push(decodeCp850(new Uint8Array(buffer)))
+
+  // Gana la que menos basura produzca; en empate se queda la primera (UTF-8).
+  return candidates.reduce((best, candidate) =>
+    garbageScore(candidate) < garbageScore(best) ? candidate : best
+  )
 }
 
 export function parseWorkbook(buffer: ArrayBuffer | string, isCsv: boolean): string[][] {
