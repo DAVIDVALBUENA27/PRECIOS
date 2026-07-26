@@ -2,6 +2,28 @@ import * as XLSX from 'xlsx'
 import { RawProduct, ColMapping } from '@/features/labels/types'
 import { parseContent, calcUnitPrice } from './unitPrice'
 
+/**
+ * Decodifica un CSV respetando su codificación real.
+ * Los exports de POS colombianos suelen venir en Windows-1252 (ANSI), no UTF-8:
+ * leerlos como UTF-8 rompe los acentos ("Código" → "Có�digo").
+ */
+export function decodeCsv(buffer: ArrayBuffer): string {
+  const utf8 = new TextDecoder('utf-8').decode(buffer)
+  // El carácter de reemplazo (U+FFFD) delata bytes que no eran UTF-8.
+  const utf8Bad = (utf8.match(/�/g) ?? []).length
+  if (utf8Bad === 0) return utf8
+
+  try {
+    const ansi = new TextDecoder('windows-1252').decode(buffer)
+    // Si el archivo SÍ era UTF-8 (con algún byte suelto dañado), forzar
+    // windows-1252 produce mojibake tipo "CÃ³digo": lo detectamos y descartamos.
+    const ansiBad = (ansi.match(/[\u00C3\u00C2][\u0080-\u00BF]/g) ?? []).length
+    return ansiBad < utf8Bad ? ansi : utf8
+  } catch {
+    return utf8
+  }
+}
+
 export function parseWorkbook(buffer: ArrayBuffer | string, isCsv: boolean): string[][] {
   const wb = isCsv
     ? XLSX.read(buffer as string, { type: 'string' })
@@ -38,7 +60,12 @@ export function autoDetectColumns(headers: string[]): Partial<ColMapping> {
   const sku = findIndex(['sku', 'codigo barras', 'barcode', 'codigo producto', 'codigo', 'code', 'referencia', 'ref', 'cod'])
   const name = findIndex(['nombre producto', 'nombre', 'descripcion', 'articulo', 'name', 'producto'], ['codigo', 'grupo'])
   const price = findIndex(['precio venta', 'valor caja contado', 'precio', 'price', 'pvp', 'valor', 'venta'], ['anterior', 'costo'])
-  const lab = findIndex(['laboratorio', 'marca', 'lab', 'brand', 'fabricante', 'linea'])
+  // 'grupo', 'categoria' y 'familia' cubren los POS que llaman así a la línea
+  // del producto (ej. "Nombre Grupo I"). Se excluyen los códigos de grupo.
+  const lab = findIndex(
+    ['laboratorio', 'marca', 'lab', 'brand', 'fabricante', 'linea', 'grupo', 'categoria', 'familia'],
+    ['codigo', 'cod ', 'id']
+  )
   const content = findIndex(['contenido', 'presentacion', 'tamano', 'peso', 'volumen', 'content'])
 
   return { name, sku, price, lab, content }
@@ -67,7 +94,17 @@ function extractContentFromName(name: string): string | null {
   return `${match[1]} ${match[2]}`.trim()
 }
 
-export function rowsToProducts(rows: string[][], map: ColMapping, headers: string[]): RawProduct[] {
+/**
+ * Convierte las filas en productos.
+ * `includeExtras` limita qué columnas sin rol se guardan como datos extra;
+ * si no se pasa, se incluyen todas (comportamiento por defecto).
+ */
+export function rowsToProducts(
+  rows: string[][],
+  map: ColMapping,
+  headers: string[],
+  includeExtras?: Set<string>
+): RawProduct[] {
   const mappedIndices = new Set([
     map.name,
     map.sku,
@@ -93,9 +130,10 @@ export function rowsToProducts(rows: string[][], map: ColMapping, headers: strin
       // Capturar columnas extra dinámicamente
       const extra: Record<string, string> = {}
       headers.forEach((header, index) => {
-        if (!mappedIndices.has(index) && header && header.trim() !== '') {
-          extra[header.trim()] = String(r[index] ?? '').trim()
-        }
+        const key = header?.trim()
+        if (mappedIndices.has(index) || !key) return
+        if (includeExtras && !includeExtras.has(key)) return
+        extra[key] = String(r[index] ?? '').trim()
       })
 
       return {

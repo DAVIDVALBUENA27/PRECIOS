@@ -55,13 +55,39 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
   })
   const [error, setError] = useState<string | null>(null)
 
-  function sampleValues(idx: number | null): string {
+  // Columnas del archivo sin rol fijo: se imprimen como datos extra si el
+  // negocio las deja marcadas.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set())
+
+  const roleByIndex = useMemo(() => {
+    const map = new Map<number, string>()
+    FIELDS.forEach((f) => {
+      const idx = selection[f.key]
+      if (idx !== null) map.set(idx, f.label)
+    })
+    return map
+  }, [selection])
+
+  const extraCount = headers.filter(
+    (h, i) => h.trim() !== '' && !roleByIndex.has(i) && !excluded.has(h.trim())
+  ).length
+
+  function toggleExtra(header: string) {
+    setExcluded((prev) => {
+      const next = new Set(prev)
+      if (next.has(header)) next.delete(header)
+      else next.add(header)
+      return next
+    })
+  }
+
+  function sampleValues(idx: number | null, count = 2): string {
     if (idx === null) return ''
     return rows
-      .slice(1, 4)
+      .slice(1, 6)
       .map((r) => String(r[idx] ?? '').trim())
       .filter(Boolean)
-      .slice(0, 2)
+      .slice(0, count)
       .join(' · ')
   }
 
@@ -80,7 +106,10 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
       return
     }
 
-    const products = rowsToProducts(rows, result.data as ColMapping, headers)
+    const includeExtras = new Set(
+      headers.map((h) => h.trim()).filter((h) => h !== '' && !excluded.has(h))
+    )
+    const products = rowsToProducts(rows, result.data as ColMapping, headers, includeExtras)
     if (products.length === 0) {
       setError('No se encontró ningún producto con las columnas seleccionadas. Revisa el mapeo.')
       return
@@ -90,7 +119,7 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-3xl">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         {/* Header */}
         <div className="mb-1 flex items-center gap-2">
@@ -145,6 +174,73 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
               )}
             </div>
           ))}
+        </div>
+
+        {/* Todas las columnas del archivo */}
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Todas las columnas de tu archivo ({headers.filter((h) => h.trim() !== '').length})
+            </h3>
+            <span className="text-xs text-slate-400">
+              {extraCount === 0
+                ? 'Ningún dato extra en la etiqueta'
+                : `${extraCount} disponible${extraCount === 1 ? '' : 's'} como dato extra`}
+            </span>
+          </div>
+          <p className="mb-3 text-xs text-slate-400">
+            Esto es exactamente lo que trae tu archivo. Las que no tienen un rol arriba puedes
+            imprimirlas como dato extra y darles tamaño y color en el diseño de la etiqueta.
+          </p>
+
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+            {headers.map((header, i) => {
+              const clean = header.trim()
+              const role = roleByIndex.get(i)
+              const sample = sampleValues(i, 3)
+
+              if (clean === '') {
+                return (
+                  <li key={`empty-${i}`} className="flex items-center gap-3 bg-slate-50/60 px-3 py-2">
+                    <span className="text-xs italic text-slate-400">
+                      Columna {i + 1} sin encabezado — se ignora
+                    </span>
+                  </li>
+                )
+              }
+
+              return (
+                <li key={`${clean}-${i}`} className="flex items-center gap-3 px-3 py-2">
+                  <div className="w-5 shrink-0">
+                    {!role && (
+                      <input
+                        type="checkbox"
+                        checked={!excluded.has(clean)}
+                        onChange={() => toggleExtra(clean)}
+                        aria-label={`Incluir ${clean} en la etiqueta`}
+                        className="accent-blue-600"
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-800">{clean}</p>
+                    <p className="truncate text-xs text-slate-400">{sample || 'sin datos'}</p>
+                  </div>
+                  {role ? (
+                    <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+                      {role}
+                    </span>
+                  ) : (
+                    <span className={`shrink-0 text-[11px] font-medium ${
+                      excluded.has(clean) ? 'text-slate-300' : 'text-slate-500'
+                    }`}>
+                      {excluded.has(clean) ? 'no se usa' : 'dato extra'}
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
         </div>
 
         {error && (

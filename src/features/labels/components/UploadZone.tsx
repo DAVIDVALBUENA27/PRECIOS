@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, DragEvent, ChangeEvent } from 'react'
-import { parseWorkbook } from '@/features/labels/lib/parseFile'
+import { decodeCsv, parseWorkbook } from '@/features/labels/lib/parseFile'
 
 const ACCEPTED_EXTENSIONS = ['.xlsx', '.xls', '.csv']
 
@@ -28,8 +28,8 @@ export function UploadZone({ onRows, onDemo }: UploadZoneProps) {
     setReading(true)
     try {
       const isCsv = ext === '.csv'
-      const buffer = isCsv ? await file.text() : await file.arrayBuffer()
-      const rows = parseWorkbook(buffer, isCsv)
+      const raw = await file.arrayBuffer()
+      const rows = parseWorkbook(isCsv ? decodeCsv(raw) : raw, isCsv)
 
       if (rows.length < 2) {
         setError('El archivo está vacío o solo tiene encabezados. Verifica el export de tu sistema.')
