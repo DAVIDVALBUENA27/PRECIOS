@@ -86,7 +86,11 @@ export default function DashboardPage() {
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     const byLab = activeLab ? products.filter((p) => p.lab === activeLab) : products
-    const base = q ? byLab.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)) : byLab
+    const base = q ? byLab.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      (p.extra != null && Object.values(p.extra).some((v) => String(v ?? '').toLowerCase().includes(q)))
+    ) : byLab
     const arr = [...base]
     switch (sortOrder) {
       case 'alpha':
@@ -422,7 +426,7 @@ export default function DashboardPage() {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre o SKU…"
+              placeholder="Buscar por nombre, SKU, código de producto…"
               className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 sm:max-w-sm"
             />
             {searchQuery && (
