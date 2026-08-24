@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guía de Instalación — Etiquetas Góndola</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 14px;
+      color: #1a1a2e;
+      background: #f8fafc;
+      padding: 40px 20px;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .header p {
+      font-size: 15px;
+      opacity: 0.85;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Content */
+    .content {
+      padding: 40px;
+    }
+
+    /* Alert box */
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+    }
+    .alert-icon { font-size: 20px; flex-shrink: 0; }
+    .alert p { font-size: 13px; color: #1d4ed8; line-height: 1.6; }
+    .alert strong { font-weight: 700; }
+
+    /* Sections */
+    .section {
+      margin-bottom: 36px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .section-number {
+      width: 32px;
+      height: 32px;
+      background: #2563eb;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1e3a5f;
+    }
+    .section-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Steps */
+    .step {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .step-dot {
+      width: 24px;
+      height: 24px;
+      background: #dbeafe;
+      border: 2px solid #93c5fd;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1d4ed8;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-body { flex: 1; }
+    .step-body strong {
+      display: block;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 4px;
+    }
+    .step-body p {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    /* Links */
+    .link-box {
+      display: inline-block;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #2563eb;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+    .code-comment { color: #64748b; }
+    .code-cmd { color: #7dd3fc; }
+
+    /* USB box */
+    .usb-box {
+      background: #fefce8;
+      border: 2px dashed #fbbf24;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    .usb-box .icon { font-size: 32px; margin-bottom: 8px; }
+    .usb-box h3 { font-size: 15px; font-weight: 700; color: #92400e; margin-bottom: 8px; }
+    .usb-box p { font-size: 13px; color: #78350f; line-height: 1.6; }
+    .usb-box code {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* Notes table */
+    .notes-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    .notes-table tr { border-bottom: 1px solid #e2e8f0; }
+    .notes-table tr:last-child { border-bottom: none; }
+    .notes-table td {
+      padding: 10px 12px;
+      font-size: 13px;
+      vertical-align: top;
+    }
+    .notes-table td:first-child {
+      font-size: 18px;
+      width: 36px;
+    }
+    .notes-table td:nth-child(2) {
+      font-weight: 700;
+      color: #1e3a5f;
+      width: 160px;
+    }
+    .notes-table td:last-child {
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    /* Success box */
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 32px;
+    }
+    .success-box .icon { font-size: 28px; margin-bottom: 8px; }
+    .success-box h3 { font-size: 15px; font-weight: 700; color: #166534; margin-bottom: 6px; }
+    .success-box p { font-size: 13px; color: #15803d; }
+
+    /* Footer */
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 20px 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    /* Print styles */
+    @media print {
+      body { background: white; padding: 0; }
+      .page {
+        box-shadow: none;
+        border-radius: 0;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>🏷️ Etiquetas Góndola</h1>
+    <p>Guía de instalación en PC nuevo</p>
+    <div class="badge">PASO A PASO COMPLETO</div>
+  </div>
+
+  <div class="content">
+
+    <!-- Alert -->
+    <div class="alert">
+      <span class="alert-icon">💡</span>
+      <p>
+        <strong>Antes de empezar:</strong> Necesitas conexión a internet durante todo el proceso
+        de instalación. Una vez instalado, la app también requiere internet para conectarse
+        a la base de datos.
+      </p>
+    </div>
+
+    <!-- USB note -->
+    <div class="usb-box" style="margin-bottom: 32px;">
+      <div class="icon">💾</div>
+      <h3>Archivo en tu USB: <code>.env.local</code></h3>
+      <p>
+        Tienes que copiar este archivo desde la USB a la carpeta del proyecto
+        (<code>PRECIOS\.env.local</code>) antes de iniciar la app.
+        Sin ese archivo <strong>la app no se conecta</strong>.
+      </p>
+    </div>
+
+    <!-- SECCIÓN 1 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <div>
+          <div class="section-title">Instalar Node.js</div>
+          <div class="section-subtitle">Solo la primera vez</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">A</div>
+        <div class="step-body">
+          <strong>Abrir el navegador y entrar a:</strong>
+          <div class="link-box">nodejs.org</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">B</div>
+        <div class="step-body">
+          <strong>Descargar el botón verde que dice "LTS"</strong>
+          <p>Ej: <em>Node.js 22.x.x LTS</em> — ese, el recomendado.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">C</div>
+        <div class="step-body">
+          <strong>Instalar con todas las opciones por defecto</strong>
+          <p>Siguiente → Siguiente → Instalar → Finalizar.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <div>
+          <div class="section-title">Instalar Git</div>
+          <div class="section-subtitle">Solo la primera vez</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">A</div>
+        <div class="step-body">
+          <strong>Ir a:</strong>
+          <div class="link-box">git-scm.com/download/win</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">B</div>
+        <div class="step-body">
+          <strong>Descargar e instalar</strong>
+          <p>Todo con las opciones por defecto. Siguiente hasta el final.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <div>
+          <div class="section-title">Descargar el proyecto</div>
+          <div class="section-subtitle">Solo la primera vez</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">A</div>
+        <div class="step-body">
+          <strong>Abrir la terminal de Windows</strong>
+          <p>Presionar <strong>Windows + R</strong>, escribir <code>cmd</code> y Enter.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">B</div>
+        <div class="step-body">
+          <strong>Escribir estos comandos uno a uno:</strong>
+          <div class="code-block">
+            <span class="code-comment"># Ir al escritorio</span><br>
+            <span class="code-cmd">cd %USERPROFILE%\Desktop</span><br><br>
+            <span class="code-comment"># Descargar el proyecto de GitHub</span><br>
+            <span class="code-cmd">git clone https://github.com/DAVIDVALBUENA27/PRECIOS.git</span><br><br>
+            <span class="code-comment"># Entrar a la carpeta</span><br>
+            <span class="code-cmd">cd PRECIOS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <div>
+          <div class="section-title">Copiar el archivo de configuración</div>
+          <div class="section-subtitle">Desde la USB</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">A</div>
+        <div class="step-body">
+          <strong>Conectar la USB al PC</strong>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">B</div>
+        <div class="step-body">
+          <strong>Copiar el archivo <code>.env.local</code> desde la USB</strong>
+          <p>
+            Pegarlo dentro de la carpeta <code>PRECIOS</code> que quedó en el Escritorio.<br>
+            La ruta completa debe quedar:<br>
+            <code>Escritorio\PRECIOS\.env.local</code>
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">C</div>
+        <div class="step-body">
+          <strong>⚠️ Nota sobre archivos ocultos</strong>
+          <p>
+            Si el archivo no se ve en el Explorador de Windows, activar
+            <strong>Ver → Elementos ocultos</strong> desde la barra de menú.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 5 -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <div>
+          <div class="section-title">Iniciar la aplicación</div>
+          <div class="section-subtitle">Cada vez que la quieras usar</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">⭐</div>
+        <div class="step-body">
+          <strong>Doble clic en <code>iniciar-app.bat</code></strong>
+          <p>
+            Está dentro de la carpeta <code>PRECIOS</code> en el Escritorio.<br>
+            La primera vez instala todo automáticamente (2-3 min). Las siguientes
+            abre directo.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">B</div>
+        <div class="step-body">
+          <strong>El navegador se abre solo en: <code>http://localhost:3000</code></strong>
+          <p>Si no abre automáticamente, escríbelo en la barra de dirección del navegador.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-dot">C</div>
+        <div class="step-body">
+          <strong>Para cerrar la app:</strong>
+          <p>Cerrar la ventana negra (terminal) que se abrió con el bat.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notas importantes -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">💡</div>
+        <div>
+          <div class="section-title">Notas importantes</div>
+        </div>
+      </div>
+
+      <table class="notes-table">
+        <tr>
+          <td>🌐</td>
+          <td>Internet</td>
+          <td>La app necesita conexión a internet. Los datos están en la nube.</td>
+        </tr>
+        <tr>
+          <td>🔑</td>
+          <td>Login</td>
+          <td>Usar el mismo correo y contraseña de siempre.</td>
+        </tr>
+        <tr>
+          <td>🔄</td>
+          <td>Actualizaciones</td>
+          <td>
+            Para recibir mejoras: abrir cmd en la carpeta PRECIOS y escribir:
+            <br><code>git pull</code> y luego <code>npm run build</code>
+          </td>
+        </tr>
+        <tr>
+          <td>🖨️</td>
+          <td>Imprimir</td>
+          <td>En el diálogo de impresión: usar escala 100% (no "ajustar a página").</td>
+        </tr>
+        <tr>
+          <td>❓</td>
+          <td>Problemas</td>
+          <td>
+            Si algo no carga: cerrar la ventana negra, borrar la carpeta
+            <code>.next</code> dentro de PRECIOS, y volver a abrir el bat.
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Success -->
+    <div class="success-box">
+      <div class="icon">🎉</div>
+      <h3>¡Listo! Ya tienes Etiquetas Góndola funcionando.</h3>
+      <p>
+        Para imprimir esta guía en PDF: presiona <strong>Ctrl + P</strong>
+        → Destino: <strong>"Guardar como PDF"</strong> → Guardar.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Etiquetas Góndola · github.com/DAVIDVALBUENA27/PRECIOS · Versión 2026
+  </div>
+
+</div>
+</body>
+</html>
