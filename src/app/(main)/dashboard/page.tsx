@@ -76,16 +76,18 @@ export default function DashboardPage() {
   }, [])
 
   // Ordenamiento y búsqueda de la tabla de revisión
-  type SortOrder = 'default' | 'alpha' | 'changed' | 'price-up' | 'price-down'
+  type SortOrder = 'default' | 'alpha' | 'new' | 'changed' | 'price-up' | 'price-down'
   const [sortOrder, setSortOrder] = useState<SortOrder>('changed')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showOnlyNew, setShowOnlyNew] = useState(false)
 
   const labs = useMemo(() => Array.from(new Set(products.map((p) => p.lab))).sort(), [products])
   const labColors = useLabColors(products.map((p) => p.lab))
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    const byLab = activeLab ? products.filter((p) => p.lab === activeLab) : products
+    const byNew = showOnlyNew ? products.filter((p) => p.isNew) : products
+    const byLab = activeLab ? byNew.filter((p) => p.lab === activeLab) : byNew
     const base = q ? byLab.filter((p) =>
       p.name.toLowerCase().includes(q) ||
       p.sku.toLowerCase().includes(q) ||
@@ -95,6 +97,8 @@ export default function DashboardPage() {
     switch (sortOrder) {
       case 'alpha':
         return arr.sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      case 'new':
+        return arr.sort((a, b) => Number(b.isNew) - Number(a.isNew))
       case 'changed':
         return arr.sort((a, b) => Number(b.changed) - Number(a.changed))
       case 'price-up':
@@ -112,17 +116,18 @@ export default function DashboardPage() {
       default:
         return arr
     }
-  }, [products, activeLab, sortOrder])
+  }, [products, activeLab, sortOrder, searchQuery, showOnlyNew])
 
   const selectedProducts = products.filter((p) => p.selected)
 
   const changedCount = products.filter((p) => p.changed).length
-  const newCount = products.filter((p) => p.oldPrice === null && !isFirstUpload).length
+  const newCount = products.filter((p) => p.isNew).length
 
   function startReview(today: RawProduct[], snapshot: RawProduct[]) {
     const diffed = compareWithSnapshot(today, snapshot).map((p) => ({ ...p, selected: p.changed }))
     setProducts(diffed)
     setActiveLab(null)
+    setShowOnlyNew(false)
     setStep('review')
   }
 
@@ -143,6 +148,7 @@ export default function DashboardPage() {
     setProducts(session.products)
     setFileName(session.fileName)
     setActiveLab(null)
+    setShowOnlyNew(false)
     setStep('review')
   }
 
@@ -159,6 +165,7 @@ export default function DashboardPage() {
       setProducts(diffed.map((p) => ({ ...p, selected: anyChanged ? p.changed : true })))
       setFileName(`Lista guardada del ${last.date}`)
       setActiveLab(null)
+      setShowOnlyNew(false)
       setStep('review')
     } finally {
       setResuming(false)
@@ -207,6 +214,69 @@ export default function DashboardPage() {
     const visible = new Set(filtered.map((p) => p.sku))
     setProducts((ps) => ps.map((p) => (visible.has(p.sku) ? { ...p, selected } : p)))
   }
+
+  /** Filtra a solo-nuevos y los deja marcados para imprimir en un clic. */
+  function focusNew() {
+    const next = !showOnlyNew
+    setShowOnlyNew(next)
+    if (next) {
+      setActiveLab(null)
+      setSearchQuery('')
+      setProducts((ps) => ps.map((p) => ({ ...p, selected: p.isNew })))
+    }
+  }
+
+  /**
+   * Procesa un código leído con el lector de código de barras.
+   * El lector "teclea" el código muy rápido y termina en Enter; aquí lo
+   * usamos para buscar y, si hay coincidencia exacta, marcar el producto.
+   */
+  const handleScan = useCallback((code: string) => {
+    const raw = code.trim()
+    if (!raw) return
+    const cl = raw.toLowerCase()
+    // Mostrar todo para que el producto escaneado no quede oculto por filtros
+    setShowOnlyNew(false)
+    setActiveLab(null)
+    setSearchQuery(raw)
+    setProducts((ps) => {
+      const matches = ps.filter(
+        (p) =>
+          p.sku.toLowerCase() === cl ||
+          (p.extra != null &&
+            Object.values(p.extra).some((v) => String(v ?? '').trim().toLowerCase() === cl)),
+      )
+      if (matches.length === 0) return ps
+      const ids = new Set(matches.map((m) => m.sku))
+      return ps.map((p) => (ids.has(p.sku) ? { ...p, selected: true } : p))
+    })
+  }, [])
+
+  // Lector de código de barras: escucha teclas rápidas terminadas en Enter,
+  // funcione o no el campo de búsqueda enfocado.
+  useEffect(() => {
+    if (step !== 'review') return
+    let buffer = ''
+    let lastTime = 0
+    function onKeyDown(e: KeyboardEvent) {
+      const now = Date.now()
+      // Si pasó mucho entre teclas, es un humano escribiendo: reiniciar.
+      if (now - lastTime > 80) buffer = ''
+      lastTime = now
+      if (e.key === 'Enter') {
+        const code = buffer
+        buffer = ''
+        if (code.length >= 3) {
+          e.preventDefault()
+          handleScan(code)
+        }
+        return
+      }
+      if (e.key.length === 1) buffer += e.key
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [step, handleScan])
 
   return (
     <div className="min-h-screen p-6 md:p-10">
@@ -376,6 +446,7 @@ export default function DashboardPage() {
           <SummaryBar
             total={products.length}
             changed={changedCount}
+            isNew={newCount}
             selected={selectedProducts.length}
           />
 
@@ -397,12 +468,23 @@ export default function DashboardPage() {
                 </button>
               )}
               {newCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                <button
+                  type="button"
+                  onClick={focusNew}
+                  aria-pressed={showOnlyNew}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                    showOnlyNew
+                      ? 'border-green-600 bg-green-600 text-white shadow-sm hover:bg-green-700'
+                      : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                  }`}
+                >
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
                   </svg>
-                  {newCount} productos nuevos
-                </span>
+                  {showOnlyNew
+                    ? `Mostrando ${newCount} nuevos · clic para ver todos`
+                    : `${newCount} productos nuevos · clic para imprimir solo estos`}
+                </button>
               )}
               {changedCount === 0 && newCount === 0 && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
@@ -426,7 +508,7 @@ export default function DashboardPage() {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre, SKU, código de producto…"
+              placeholder="Buscar por nombre, SKU, código… o escanea con el lector"
               className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 sm:max-w-sm"
             />
             {searchQuery && (
@@ -441,6 +523,15 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
+
+          {/* Pista del lector de código de barras */}
+          <p className="flex items-center gap-1.5 text-xs text-slate-400">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.5v15m3-15v15m3-15v15m4.5-15v15m3-15v15M6.75 4.5h.008v.008H6.75V4.5z" />
+            </svg>
+            Tienes el lector conectado: escanea cualquier producto y se busca y selecciona solo —
+            no hace falta hacer clic en el buscador.
+          </p>
 
           {/* Resultado de búsqueda */}
           {searchQuery.trim() && (
@@ -459,6 +550,7 @@ export default function DashboardPage() {
             {([
               ['default',    'Por defecto'],
               ['alpha',      'A → Z'],
+              ['new',        '✦ Nuevos primero'],
               ['changed',    'Cambiaron primero'],
               ['price-up',   '▲ Subieron primero'],
               ['price-down', '▼ Bajaron primero'],

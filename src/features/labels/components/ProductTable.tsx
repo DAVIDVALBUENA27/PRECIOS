@@ -61,8 +61,9 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
         <tbody className="divide-y divide-gray-100">
           {products.map((p) => {
             const color = labColors.get(p.lab)
+            const rowBg = p.isNew ? 'bg-green-50/60' : p.changed ? 'bg-orange-50/50' : undefined
             return (
-              <tr key={p.sku} className={p.changed ? 'bg-orange-50/50' : undefined}>
+              <tr key={p.sku} className={rowBg}>
                 <td className="px-4 py-2">
                   <input
                     type="checkbox"
@@ -72,7 +73,14 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
                     aria-label={`Seleccionar ${p.name}`}
                   />
                 </td>
-                <td className="px-4 py-2 text-gray-900">{p.name}</td>
+                <td className="px-4 py-2 text-gray-900">
+                  <span className="align-middle">{p.name}</span>
+                  {p.isNew && (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-green-700">
+                      ✦ Nuevo
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-2 font-mono text-xs text-gray-500">{p.sku}</td>
                 <td className="px-4 py-2">
                   <span className={p.changed ? 'font-semibold text-orange-600' : 'text-gray-900'}>

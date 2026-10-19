@@ -23,6 +23,8 @@ export interface ProductWithDiff extends RawProduct {
   oldPrice: number | null
   oldUnitPrice: number | null
   changed: boolean
+  /** true si el SKU no existía en el listado anterior (producto nuevo). */
+  isNew: boolean
   selected?: boolean
 }
 
