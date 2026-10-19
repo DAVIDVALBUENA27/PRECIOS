@@ -28,7 +28,7 @@ export async function signup(formData: FormData) {
   const fullName = formData.get('full_name') as string
   const businessName = formData.get('business_name') as string
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -42,6 +42,14 @@ export async function signup(formData: FormData) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Si la confirmación por correo está desactivada, Supabase devuelve una
+  // sesión activa: el usuario ya quedó dentro, lo mandamos al panel.
+  // Si sigue activa (no hay sesión), mostramos el aviso de revisar el correo.
+  if (data.session) {
+    revalidatePath('/', 'layout')
+    redirect('/dashboard')
   }
 
   redirect('/check-email')
