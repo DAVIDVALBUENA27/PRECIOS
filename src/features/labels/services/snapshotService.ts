@@ -207,20 +207,17 @@ export async function getSnapshotCount(): Promise<number> {
 }
 
 /**
- * Último precio conocido de CADA código, juntando todo el historial.
+ * Último precio conocido de cada producto ANTES de `beforeDate` (por defecto
+ * hoy), juntando todo el historial: snapshots locales + Supabase.
  *
- * Antes se comparaba solo contra el último archivo subido: si ese día se subió
- * un archivo parcial (ej. 91 productos), todo lo que vino en archivos de días
- * anteriores salía como "nuevo" y no se veía si subió o bajó.
+ * - Antes se comparaba solo contra el último archivo: si ese día se subió uno
+ *   parcial, todo lo cargado en días anteriores salía como "nuevo".
+ * - Se excluye el día de hoy: si el archivo ya se subió hoy y se vuelve a
+ *   subir, se comparaba consigo mismo y "nada subió ni bajó".
  *
- * Fuentes (gana el dato más reciente de cada código):
- *   - todos los snapshots de localStorage
- *   - Supabase: tabla `products` (último precio por código) o, si se pide
- *     `beforeDate`, los snapshots anteriores a esa fecha.
- *
- * @param beforeDate  YYYY-MM-DD. Si se pasa, solo cuenta lo anterior a ese día.
+ * Devuelve la lista ordenada de más vieja a más reciente (ver compareWithSnapshot).
  */
-export async function loadPriceReference(beforeDate?: string): Promise<RawProduct[]> {
+export async function loadPriceReference(beforeDate: string = localDate()): Promise<RawProduct[]> {
   const ref = new Map<string, { p: RawProduct; date: string }>()
   const put = (p: RawProduct, date: string) => {
     if (!p.sku) return
@@ -229,7 +226,7 @@ export async function loadPriceReference(beforeDate?: string): Promise<RawProduc
   }
 
   for (const snap of lsGetAll()) {
-    if (beforeDate && snap.date >= beforeDate) continue
+    if (snap.date >= beforeDate) continue
     for (const p of snap.products) put(p, snap.date)
   }
 
@@ -237,34 +234,23 @@ export async function loadPriceReference(beforeDate?: string): Promise<RawProduc
     const businessId = await getBusinessId()
     if (businessId) {
       const sb = createClient()
-      const rows = beforeDate
-        ? await fetchAllRows((from, to) =>
-            sb
-              .from('price_snapshots')
-              .select('*')
-              .eq('business_id', businessId)
-              .lt('snapshot_date', beforeDate)
-              .order('snapshot_date', { ascending: true })
-              .range(from, to)
-          )
-        : await fetchAllRows((from, to) =>
-            sb.from('products').select('*').eq('business_id', businessId).range(from, to)
-          )
-      for (const row of rows) {
-        const date = beforeDate
-          ? String(row.snapshot_date)
-          : row.updated_at ? localDate(new Date(String(row.updated_at))) : ''
-        put(fromDbRow(row), date)
-      }
+      const rows = await fetchAllRows((from, to) =>
+        sb
+          .from('price_snapshots')
+          .select('*')
+          .eq('business_id', businessId)
+          .lt('snapshot_date', beforeDate)
+          .order('snapshot_date', { ascending: true })
+          .order('sku', { ascending: true })
+          .range(from, to)
+      )
+      for (const row of rows) put(fromDbRow(row), String(row.snapshot_date))
     }
   } catch { /* Supabase no disponible: se usa solo lo local */ }
 
-  return Array.from(ref.values()).map((v) => v.p)
-}
-
-/** Une un archivo recién subido a la referencia (el archivo nuevo manda). */
-export function mergeIntoReference(reference: RawProduct[], products: RawProduct[]): RawProduct[] {
-  return dedupeBySku([...reference, ...products])
+  return Array.from(ref.values())
+    .sort((x, y) => x.date.localeCompare(y.date))
+    .map((v) => v.p)
 }
 
 // ─── Para página /ajustes ─────────────────────────────────────────────────────
