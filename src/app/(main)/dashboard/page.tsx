@@ -14,7 +14,8 @@ import { compareWithSnapshot } from '@/features/labels/lib/compareProducts'
 import { useLabColors } from '@/features/labels/hooks/useLabColors'
 import { DEMO_DAY1, DEMO_DAY2 } from '@/features/labels/lib/demoData'
 import {
-  loadLastSnapshot,
+  loadPriceReference,
+  mergeIntoReference,
   saveSnapshot,
   getSnapshotCount,
   loadResumableList,
@@ -38,7 +39,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductWithDiff[]>([])
   const [activeLab, setActiveLab] = useState<string | null>(null)
 
-  // Historial de precios
+  // Historial de precios: último precio conocido de cada código (todos los días)
   const [lastSnapshot, setLastSnapshot] = useState<RawProduct[]>([])
   const [snapshotLoaded, setSnapshotLoaded] = useState(false)
   const [isFirstUpload, setIsFirstUpload] = useState(false)
@@ -63,7 +64,7 @@ export default function DashboardPage() {
     setSession(loadSession())
     async function init() {
       try {
-        const [count, snap] = await Promise.all([getSnapshotCount(), loadLastSnapshot()])
+        const [count, snap] = await Promise.all([getSnapshotCount(), loadPriceReference()])
         setIsFirstUpload(count === 0)
         setLastSnapshot(snap)
       } catch {
@@ -189,7 +190,7 @@ export default function DashboardPage() {
   }
 
   const handleConfirm = useCallback(async (parsed: RawProduct[]) => {
-    // Comparar con el último snapshot cargado (o vacío si es primera vez)
+    // Comparar con el último precio conocido de cada código (todo el historial)
     startReview(parsed, lastSnapshot)
 
     // Guardar en Supabase en segundo plano
@@ -197,7 +198,7 @@ export default function DashboardPage() {
     try {
       await saveSnapshot(parsed)
       // Refrescar para que la próxima carga tenga el snapshot actualizado
-      setLastSnapshot(parsed)
+      setLastSnapshot((ref) => mergeIntoReference(ref, parsed))
       setIsFirstUpload(false)
     } catch (err) {
       console.error('Error al guardar snapshot:', err)
