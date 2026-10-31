@@ -48,12 +48,13 @@ export function compareWithSnapshot(
     let best = -1
     for (const code of productCodes(p)) best = Math.max(best, byCode.get(code) ?? -1)
     const prev = best >= 0 ? snapshot[best] : undefined
-    const oldPrice = prev ? prev.price : null
+    const oldPrice = prev?.price != null ? Math.round(prev.price) : null
     return {
       ...p,
       oldPrice,
       oldUnitPrice: prev ? prev.unitPrice : null,
-      changed: oldPrice !== null && p.price !== null && oldPrice !== p.price,
+      // Se compara en pesos enteros: decimales sueltos no son un cambio real
+      changed: oldPrice !== null && p.price !== null && oldPrice !== Math.round(p.price),
       isNew: hasSnapshot && !prev,
       selected: false,
     }

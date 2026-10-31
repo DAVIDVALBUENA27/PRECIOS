@@ -200,10 +200,8 @@ function parsePrice(v: unknown): number | null {
   
   // Si ya es un número, manejarlo de inmediato
   if (typeof v === 'number') {
-    if (v < 1000) {
-      return v * 1000
-    }
-    return v
+    // Redondear a pesos: 32.3 * 1000 da 32299.999… en el computador
+    return Math.round(v < 1000 ? v * 1000 : v)
   }
 
   let str = String(v).trim()
@@ -250,5 +248,6 @@ function parsePrice(v: unknown): number | null {
     n = n * 1000
   }
 
-  return n
+  // Redondear a pesos: 32.3 * 1000 da 32299.999… y parecía un cambio de precio
+  return Math.round(n)
 }

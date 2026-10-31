@@ -88,7 +88,7 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
                   </span>
                   {p.changed && (
                     <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700">
-                      ↑ cambió
+                      {p.oldPrice !== null && p.price !== null && p.price < p.oldPrice ? '↓ bajó' : '↑ subió'}
                     </span>
                   )}
                 </td>
