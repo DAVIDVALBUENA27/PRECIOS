@@ -15,7 +15,6 @@ import { useLabColors } from '@/features/labels/hooks/useLabColors'
 import { DEMO_DAY1, DEMO_DAY2 } from '@/features/labels/lib/demoData'
 import {
   loadPriceReference,
-  mergeIntoReference,
   saveSnapshot,
   getSnapshotCount,
   loadResumableList,
@@ -39,7 +38,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductWithDiff[]>([])
   const [activeLab, setActiveLab] = useState<string | null>(null)
 
-  // Historial de precios: último precio conocido de cada código (todos los días)
+  // Historial de precios: último precio conocido de cada producto (días anteriores a hoy)
   const [lastSnapshot, setLastSnapshot] = useState<RawProduct[]>([])
   const [snapshotLoaded, setSnapshotLoaded] = useState(false)
   const [isFirstUpload, setIsFirstUpload] = useState(false)
@@ -190,15 +189,14 @@ export default function DashboardPage() {
   }
 
   const handleConfirm = useCallback(async (parsed: RawProduct[]) => {
-    // Comparar con el último precio conocido de cada código (todo el historial)
+    // Comparar con el último precio conocido de cada producto antes de hoy
     startReview(parsed, lastSnapshot)
 
     // Guardar en Supabase en segundo plano
     setSaving(true)
     try {
       await saveSnapshot(parsed)
-      // Refrescar para que la próxima carga tenga el snapshot actualizado
-      setLastSnapshot((ref) => mergeIntoReference(ref, parsed))
+      // La referencia (días anteriores a hoy) no cambia al subir otro archivo hoy
       setIsFirstUpload(false)
     } catch (err) {
       console.error('Error al guardar snapshot:', err)
@@ -380,7 +378,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm font-semibold text-green-800">Historial activo</p>
                   <p className="mt-0.5 text-xs text-green-700">
-                    Compararemos con <strong>{lastSnapshot.length.toLocaleString('es-CO')} productos</strong> del último listado guardado y marcaremos los cambios automáticamente.
+                    Compararemos con <strong>{lastSnapshot.length.toLocaleString('es-CO')} productos</strong> de tu historial (días anteriores) y marcaremos los cambios automáticamente.
                   </p>
                 </div>
               </div>
