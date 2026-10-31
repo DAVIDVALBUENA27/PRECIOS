@@ -18,6 +18,21 @@ import { RawProduct } from '@/features/labels/types'
 
 const LS_KEY = 'precios_snapshots_v1'
 
+/** Fecha local YYYY-MM-DD (no UTC: en Colombia después de las 7 pm UTC ya es "mañana"). */
+function localDate(d: Date = new Date()): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Un producto por código; el último gana. Sin código no se puede comparar. */
+function dedupeBySku(products: RawProduct[]): RawProduct[] {
+  const map = new Map<string, RawProduct>()
+  for (const p of products) if (p.sku) map.set(p.sku, p)
+  return Array.from(map.values())
+}
+
 interface LocalSnap {
   date: string             // YYYY-MM-DD
   productCount: number
@@ -43,9 +58,16 @@ function lsSave(snaps: LocalSnap[]): void {
   } catch { /* quota exceeded — ignorar */ }
 }
 
+/**
+ * Guarda el día. Si ese mismo día ya se subió otro archivo, se SUMAN los
+ * productos (el archivo nuevo manda en precio) en vez de borrar el anterior.
+ */
 function lsUpsertSnapshot(date: string, products: RawProduct[]): void {
-  const snaps = lsGetAll().filter((s) => s.date !== date)
-  snaps.unshift({ date, productCount: products.length, products })
+  const all = lsGetAll()
+  const sameDay = all.find((s) => s.date === date)
+  const merged = dedupeBySku([...(sameDay?.products ?? []), ...products])
+  const snaps = all.filter((s) => s.date !== date)
+  snaps.unshift({ date, productCount: merged.length, products: merged })
   lsSave(snaps)
 }
 
@@ -102,51 +124,49 @@ function fromDbRow(row: Record<string, unknown>): RawProduct {
   }
 }
 
+const CHUNK = 500
+
 async function sbSaveSnapshot(products: RawProduct[]): Promise<void> {
   const businessId = await getBusinessId()
   if (!businessId) return
 
   const sb = createClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDate()
+  const now = new Date().toISOString()
+  // Códigos repetidos o vacíos hacen fallar el upsert COMPLETO en Postgres
+  // ("cannot affect row a second time"), y el archivo no quedaba guardado.
+  const unique = dedupeBySku(products)
 
-  const productRows = products.map((p) => ({
-    ...toDbRow(p, businessId),
-    updated_at: new Date().toISOString(),
-  }))
-  await sb.from('products').upsert(productRows, { onConflict: 'business_id,sku' })
-
-  const snapshotRows = products.map((p) => ({
-    ...toDbRow(p, businessId),
-    snapshot_date: today,
-  }))
-  await sb
-    .from('price_snapshots')
-    .upsert(snapshotRows, { onConflict: 'business_id,snapshot_date,sku' })
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const part = unique.slice(i, i + CHUNK)
+    const { error: e1 } = await sb
+      .from('products')
+      .upsert(part.map((p) => ({ ...toDbRow(p, businessId), updated_at: now })), {
+        onConflict: 'business_id,sku',
+      })
+    if (e1) throw e1
+    const { error: e2 } = await sb
+      .from('price_snapshots')
+      .upsert(part.map((p) => ({ ...toDbRow(p, businessId), snapshot_date: today })), {
+        onConflict: 'business_id,snapshot_date,sku',
+      })
+    if (e2) throw e2
+  }
 }
 
-async function sbLoadLast(): Promise<RawProduct[] | null> {
-  const businessId = await getBusinessId()
-  if (!businessId) return null
-  const sb = createClient()
-
-  const { data: latest } = await sb
-    .from('price_snapshots')
-    .select('snapshot_date')
-    .eq('business_id', businessId)
-    .order('snapshot_date', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (!latest) return null
-
-  const { data: rows, error } = await sb
-    .from('price_snapshots')
-    .select('*')
-    .eq('business_id', businessId)
-    .eq('snapshot_date', latest.snapshot_date)
-
-  if (error || !rows) return null
-  return rows.map(fromDbRow)
+/** Supabase devuelve máximo 1000 filas por consulta: se pide por páginas. */
+async function fetchAllRows(
+  build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>
+): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error || !data) break
+    out.push(...(data as Record<string, unknown>[]))
+    if (data.length < PAGE) break
+  }
+  return out
 }
 
 // ─── API pública ─────────────────────────────────────────────────────────────
@@ -156,7 +176,7 @@ async function sbLoadLast(): Promise<RawProduct[] | null> {
  */
 export async function saveSnapshot(products: RawProduct[]): Promise<void> {
   if (products.length === 0) return
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDate()
 
   // 1) localStorage: rápido, siempre funciona
   lsUpsertSnapshot(today, products)
@@ -165,28 +185,6 @@ export async function saveSnapshot(products: RawProduct[]): Promise<void> {
   sbSaveSnapshot(products).catch((err) =>
     console.warn('[SnapshotService] Supabase save failed (no crítico):', err)
   )
-}
-
-/**
- * Carga el último snapshot: primero localStorage, luego Supabase como respaldo.
- */
-export async function loadLastSnapshot(): Promise<RawProduct[]> {
-  // 1) localStorage: instantáneo
-  const local = lsGetAll()
-  if (local.length > 0) return local[0].products
-
-  // 2) Supabase: si localStorage está vacío (ej: primer uso en este dispositivo)
-  try {
-    const sbData = await sbLoadLast()
-    if (sbData && sbData.length > 0) {
-      // Cachear en localStorage para próximas consultas
-      const today = new Date().toISOString().slice(0, 10)
-      lsUpsertSnapshot(today, sbData)
-      return sbData
-    }
-  } catch { /* Supabase no disponible */ }
-
-  return []
 }
 
 /**
@@ -206,6 +204,67 @@ export async function getSnapshotCount(): Promise<number> {
       .eq('business_id', businessId)
     return count ?? 0
   } catch { return 0 }
+}
+
+/**
+ * Último precio conocido de CADA código, juntando todo el historial.
+ *
+ * Antes se comparaba solo contra el último archivo subido: si ese día se subió
+ * un archivo parcial (ej. 91 productos), todo lo que vino en archivos de días
+ * anteriores salía como "nuevo" y no se veía si subió o bajó.
+ *
+ * Fuentes (gana el dato más reciente de cada código):
+ *   - todos los snapshots de localStorage
+ *   - Supabase: tabla `products` (último precio por código) o, si se pide
+ *     `beforeDate`, los snapshots anteriores a esa fecha.
+ *
+ * @param beforeDate  YYYY-MM-DD. Si se pasa, solo cuenta lo anterior a ese día.
+ */
+export async function loadPriceReference(beforeDate?: string): Promise<RawProduct[]> {
+  const ref = new Map<string, { p: RawProduct; date: string }>()
+  const put = (p: RawProduct, date: string) => {
+    if (!p.sku) return
+    const cur = ref.get(p.sku)
+    if (!cur || date >= cur.date) ref.set(p.sku, { p, date })
+  }
+
+  for (const snap of lsGetAll()) {
+    if (beforeDate && snap.date >= beforeDate) continue
+    for (const p of snap.products) put(p, snap.date)
+  }
+
+  try {
+    const businessId = await getBusinessId()
+    if (businessId) {
+      const sb = createClient()
+      const rows = beforeDate
+        ? await fetchAllRows((from, to) =>
+            sb
+              .from('price_snapshots')
+              .select('*')
+              .eq('business_id', businessId)
+              .lt('snapshot_date', beforeDate)
+              .order('snapshot_date', { ascending: true })
+              .range(from, to)
+          )
+        : await fetchAllRows((from, to) =>
+            sb.from('products').select('*').eq('business_id', businessId).range(from, to)
+          )
+      for (const row of rows) {
+        const date = beforeDate
+          ? String(row.snapshot_date)
+          : row.updated_at ? localDate(new Date(String(row.updated_at))) : ''
+        put(fromDbRow(row), date)
+      }
+    }
+  } catch { /* Supabase no disponible: se usa solo lo local */ }
+
+  return Array.from(ref.values()).map((v) => v.p)
+}
+
+/** Une un archivo recién subido a la referencia (el archivo nuevo manda). */
+export function mergeIntoReference(reference: RawProduct[], products: RawProduct[]): RawProduct[] {
+  return dedupeBySku([...reference, ...products])
 }
 
 // ─── Para página /ajustes ─────────────────────────────────────────────────────
@@ -266,19 +325,21 @@ export async function loadSnapshotByDate(date: string): Promise<RawProduct[]> {
   const businessId = await getBusinessId()
   if (!businessId) return []
   const sb = createClient()
-  const { data, error } = await sb
-    .from('price_snapshots')
-    .select('*')
-    .eq('business_id', businessId)
-    .eq('snapshot_date', date)
-  if (error || !data) return []
-  return data.map(fromDbRow)
+  const rows = await fetchAllRows((from, to) =>
+    sb
+      .from('price_snapshots')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('snapshot_date', date)
+      .range(from, to)
+  )
+  return rows.map(fromDbRow)
 }
 
 export interface ResumableList {
   /** Productos del último día guardado. */
   products: RawProduct[]
-  /** Día anterior, para volver a marcar los que cambiaron de precio. */
+  /** Último precio conocido ANTES de ese día, para volver a marcar los cambios. */
   previous: RawProduct[]
   date: string
 }
@@ -293,7 +354,7 @@ export async function loadResumableList(): Promise<ResumableList | null> {
 
   const [products, previous] = await Promise.all([
     loadSnapshotByDate(dates[0]),
-    dates[1] ? loadSnapshotByDate(dates[1]) : Promise.resolve([]),
+    loadPriceReference(dates[0]),
   ])
   if (products.length === 0) return null
 
