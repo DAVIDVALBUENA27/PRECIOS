@@ -55,7 +55,7 @@ export function GroupedTag({
 
           return (
             <div
-              key={p.sku}
+              key={p.uid}
               className={`flex flex-col items-center text-center overflow-hidden ${
                 subIdx === 0 ? 'border-r border-gray-100 pr-1' : 'pl-1'
               }`}

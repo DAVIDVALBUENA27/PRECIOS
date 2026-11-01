@@ -9,6 +9,13 @@ import {
   ProductTable,
   PrintPreview,
 } from '@/features/labels/components'
+import { ChangeFilters } from '@/features/labels/components/ChangeFilters'
+import {
+  type ChangeGroup,
+  groupOf,
+  sortByGroups,
+  ensureUids,
+} from '@/features/labels/lib/changeGroups'
 import { ProductWithDiff, RawProduct } from '@/features/labels/types'
 import { compareWithSnapshot } from '@/features/labels/lib/compareProducts'
 import { useLabColors } from '@/features/labels/hooks/useLabColors'
@@ -76,59 +83,87 @@ export default function DashboardPage() {
   }, [])
 
   // Ordenamiento y búsqueda de la tabla de revisión
-  type SortOrder = 'default' | 'alpha' | 'new' | 'changed' | 'price-up' | 'price-down'
-  const [sortOrder, setSortOrder] = useState<SortOrder>('changed')
+  type SortOrder = 'default' | 'alpha'
+  const [sortOrder, setSortOrder] = useState<SortOrder>('default')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showOnlyNew, setShowOnlyNew] = useState(false)
+  // Grupos (nuevos / subieron / bajaron) que van arriba, en el orden en que se activaron
+  const [activeGroups, setActiveGroups] = useState<ChangeGroup[]>([])
+  const [onlyActive, setOnlyActive] = useState(false)
 
   const labs = useMemo(() => Array.from(new Set(products.map((p) => p.lab))).sort(), [products])
   const labColors = useLabColors(products.map((p) => p.lab))
 
+  // Orden completo: base (por defecto o A→Z) + grupos activos arriba.
+  // También es el orden en que se imprimen las etiquetas.
+  const ordered = useMemo(() => {
+    const base = sortOrder === 'alpha'
+      ? [...products].sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      : products
+    return sortByGroups(base, activeGroups)
+  }, [products, sortOrder, activeGroups])
+
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    const byNew = showOnlyNew ? products.filter((p) => p.isNew) : products
-    const byLab = activeLab ? byNew.filter((p) => p.lab === activeLab) : byNew
-    const base = q ? byLab.filter((p) =>
-      p.name.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      (p.extra != null && Object.values(p.extra).some((v) => String(v ?? '').toLowerCase().includes(q)))
-    ) : byLab
-    const arr = [...base]
-    switch (sortOrder) {
-      case 'alpha':
-        return arr.sort((a, b) => a.name.localeCompare(b.name, 'es'))
-      case 'new':
-        return arr.sort((a, b) => Number(b.isNew) - Number(a.isNew))
-      case 'changed':
-        return arr.sort((a, b) => Number(b.changed) - Number(a.changed))
-      case 'price-up':
-        return arr.sort((a, b) => {
-          const aUp = a.changed && a.oldPrice !== null && a.price !== null && a.price > a.oldPrice
-          const bUp = b.changed && b.oldPrice !== null && b.price !== null && b.price > b.oldPrice
-          return Number(bUp) - Number(aUp)
-        })
-      case 'price-down':
-        return arr.sort((a, b) => {
-          const aDown = a.changed && a.oldPrice !== null && a.price !== null && a.price < a.oldPrice
-          const bDown = b.changed && b.oldPrice !== null && b.price !== null && b.price < b.oldPrice
-          return Number(bDown) - Number(aDown)
-        })
-      default:
-        return arr
+    return ordered.filter((p) => {
+      if (onlyActive && activeGroups.length > 0) {
+        const g = groupOf(p)
+        if (!g || !activeGroups.includes(g)) return false
+      }
+      if (activeLab && p.lab !== activeLab) return false
+      if (!q) return true
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        (p.extra != null && Object.values(p.extra).some((v) => String(v ?? '').toLowerCase().includes(q)))
+      )
+    })
+  }, [ordered, activeLab, searchQuery, onlyActive, activeGroups])
+
+  const selectedProducts = useMemo(() => ordered.filter((p) => p.selected), [ordered])
+
+  const groupCounts = useMemo(() => {
+    const c: Record<ChangeGroup, number> = { new: 0, up: 0, down: 0 }
+    for (const p of products) {
+      const g = groupOf(p)
+      if (g) c[g]++
     }
-  }, [products, activeLab, sortOrder, searchQuery, showOnlyNew])
+    return c
+  }, [products])
+  const changedCount = groupCounts.up + groupCounts.down
+  const newCount = groupCounts.new
 
-  const selectedProducts = products.filter((p) => p.selected)
+  /** Activa/desactiva un grupo: lo marca (o desmarca) y lo sube arriba. */
+  function toggleGroup(g: ChangeGroup) {
+    const isOn = activeGroups.includes(g)
+    setActiveGroups((gs) => (isOn ? gs.filter((x) => x !== g) : [...gs, g]))
+    setProducts((ps) => ps.map((p) => (groupOf(p) === g ? { ...p, selected: !isOn } : p)))
+  }
 
-  const changedCount = products.filter((p) => p.changed).length
-  const newCount = products.filter((p) => p.isNew).length
+  /** Marca de una vez todos los que subieron, bajaron y los nuevos. */
+  function selectAllGroups() {
+    setActiveGroups((gs) => [...gs, ...(['up', 'down', 'new'] as const).filter((g) => !gs.includes(g))])
+    setProducts((ps) => ps.map((p) => ({ ...p, selected: groupOf(p) !== null })))
+  }
+
+  function clearGroups() {
+    setActiveGroups([])
+    setOnlyActive(false)
+    setProducts((ps) => ps.map((p) => ({ ...p, selected: false })))
+  }
+
+  function resetView(groups: ChangeGroup[]) {
+    setActiveGroups(groups)
+    setOnlyActive(false)
+    setActiveLab(null)
+    setSearchQuery('')
+    setStep('review')
+  }
 
   function startReview(today: RawProduct[], snapshot: RawProduct[]) {
+    // Al llegar: los que subieron y los que bajaron quedan marcados y arriba
     const diffed = compareWithSnapshot(today, snapshot).map((p) => ({ ...p, selected: p.changed }))
     setProducts(diffed)
-    setActiveLab(null)
-    setShowOnlyNew(false)
-    setStep('review')
+    resetView(['up', 'down'])
   }
 
   // Guardar la sesión mientras se trabaja, para poder retomarla al volver
@@ -145,11 +180,9 @@ export default function DashboardPage() {
   /** Retoma la última sesión de este equipo, con la selección tal como quedó. */
   function resumeSession() {
     if (!session) return
-    setProducts(session.products)
+    setProducts(ensureUids(session.products))
     setFileName(session.fileName)
-    setActiveLab(null)
-    setShowOnlyNew(false)
-    setStep('review')
+    resetView([])
   }
 
   /** Reabre la última lista guardada en el historial (sirve desde otro equipo). */
@@ -164,9 +197,7 @@ export default function DashboardPage() {
       const anyChanged = diffed.some((p) => p.changed)
       setProducts(diffed.map((p) => ({ ...p, selected: anyChanged ? p.changed : true })))
       setFileName(`Lista guardada del ${last.date}`)
-      setActiveLab(null)
-      setShowOnlyNew(false)
-      setStep('review')
+      resetView(anyChanged ? ['up', 'down'] : [])
     } finally {
       setResuming(false)
     }
@@ -205,24 +236,13 @@ export default function DashboardPage() {
     }
   }, [lastSnapshot])
 
-  function toggleProduct(sku: string) {
-    setProducts((ps) => ps.map((p) => (p.sku === sku ? { ...p, selected: !p.selected } : p)))
+  function toggleProduct(uid: string) {
+    setProducts((ps) => ps.map((p) => (p.uid === uid ? { ...p, selected: !p.selected } : p)))
   }
 
   function toggleAll(selected: boolean) {
-    const visible = new Set(filtered.map((p) => p.sku))
-    setProducts((ps) => ps.map((p) => (visible.has(p.sku) ? { ...p, selected } : p)))
-  }
-
-  /** Filtra a solo-nuevos y los deja marcados para imprimir en un clic. */
-  function focusNew() {
-    const next = !showOnlyNew
-    setShowOnlyNew(next)
-    if (next) {
-      setActiveLab(null)
-      setSearchQuery('')
-      setProducts((ps) => ps.map((p) => ({ ...p, selected: p.isNew })))
-    }
+    const visible = new Set(filtered.map((p) => p.uid))
+    setProducts((ps) => ps.map((p) => (visible.has(p.uid) ? { ...p, selected } : p)))
   }
 
   /**
@@ -235,7 +255,7 @@ export default function DashboardPage() {
     if (!raw) return
     const cl = raw.toLowerCase()
     // Mostrar todo para que el producto escaneado no quede oculto por filtros
-    setShowOnlyNew(false)
+    setOnlyActive(false)
     setActiveLab(null)
     setSearchQuery(raw)
     setProducts((ps) => {
@@ -246,8 +266,8 @@ export default function DashboardPage() {
             Object.values(p.extra).some((v) => String(v ?? '').trim().toLowerCase() === cl)),
       )
       if (matches.length === 0) return ps
-      const ids = new Set(matches.map((m) => m.sku))
-      return ps.map((p) => (ids.has(p.sku) ? { ...p, selected: true } : p))
+      const ids = new Set(matches.map((m) => m.uid))
+      return ps.map((p) => (ids.has(p.uid) ? { ...p, selected: true } : p))
     })
   }, [])
 
@@ -449,51 +469,16 @@ export default function DashboardPage() {
             selected={selectedProducts.length}
           />
 
-          {/* Badges de cambios */}
-          {!isFirstUpload && (changedCount > 0 || newCount > 0) && (
-            <div className="flex flex-wrap gap-2">
-              {changedCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProducts((ps) => ps.map((p) => ({ ...p, selected: p.changed })))
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                  </svg>
-                  {changedCount} con cambio de precio · clic para seleccionar solo estos
-                </button>
-              )}
-              {newCount > 0 && (
-                <button
-                  type="button"
-                  onClick={focusNew}
-                  aria-pressed={showOnlyNew}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                    showOnlyNew
-                      ? 'border-green-600 bg-green-600 text-white shadow-sm hover:bg-green-700'
-                      : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
-                  }`}
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                  </svg>
-                  {showOnlyNew
-                    ? `Mostrando ${newCount} nuevos · clic para ver todos`
-                    : `${newCount} productos nuevos · clic para imprimir solo estos`}
-                </button>
-              )}
-              {changedCount === 0 && newCount === 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Sin cambios de precio respecto al listado anterior
-                </span>
-              )}
-            </div>
+          {!isFirstUpload && (
+            <ChangeFilters
+              counts={groupCounts}
+              active={activeGroups}
+              onToggle={toggleGroup}
+              onSelectAll={selectAllGroups}
+              onClear={clearGroups}
+              onlyActive={onlyActive}
+              onOnlyActiveChange={setOnlyActive}
+            />
           )}
 
           <LabChips labs={labs} labColors={labColors} activeLab={activeLab} onSelect={setActiveLab} />
@@ -547,12 +532,8 @@ export default function DashboardPage() {
               Ordenar:
             </span>
             {([
-              ['default',    'Por defecto'],
-              ['alpha',      'A → Z'],
-              ['new',        '✦ Nuevos primero'],
-              ['changed',    'Cambiaron primero'],
-              ['price-up',   '▲ Subieron primero'],
-              ['price-down', '▼ Bajaron primero'],
+              ['default', 'Como viene en el archivo'],
+              ['alpha',   'A → Z'],
             ] as const).map(([key, label]) => (
               <button
                 key={key}

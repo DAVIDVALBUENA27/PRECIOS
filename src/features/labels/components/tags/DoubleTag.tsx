@@ -44,7 +44,7 @@ export function DoubleTag({
 
         return (
           <div
-            key={p.sku}
+            key={p.uid}
             className={`mini-tag-col ${dragOver === flatIdx ? 'dnd-over' : ''} ${
               draggingIdx === flatIdx ? 'dnd-dragging' : ''
             }`}

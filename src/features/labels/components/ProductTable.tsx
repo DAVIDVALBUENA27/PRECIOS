@@ -14,7 +14,7 @@ function formatPrice(price: number | null): string {
 interface ProductTableProps {
   products: ProductWithDiff[]
   labColors: Map<string, LabColor>
-  onToggle: (sku: string) => void
+  onToggle: (uid: string) => void
   onToggleAll: (selected: boolean) => void
 }
 
@@ -63,12 +63,12 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
             const color = labColors.get(p.lab)
             const rowBg = p.isNew ? 'bg-green-50/60' : p.changed ? 'bg-orange-50/50' : undefined
             return (
-              <tr key={p.sku} className={rowBg}>
+              <tr key={p.uid} className={rowBg}>
                 <td className="px-4 py-2">
                   <input
                     type="checkbox"
                     checked={p.selected ?? false}
-                    onChange={() => onToggle(p.sku)}
+                    onChange={() => onToggle(p.uid)}
                     className="accent-blue-600"
                     aria-label={`Seleccionar ${p.name}`}
                   />
