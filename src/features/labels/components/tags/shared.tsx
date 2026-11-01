@@ -3,7 +3,7 @@
 /** Piezas compartidas por los tres modos de etiqueta. */
 
 import { ProductWithDiff } from '@/features/labels/types'
-import { resolveExtraField, type LabelStyle } from '@/features/labels/types/labelStyle'
+import { resolveExtraField, orderExtraFields, type LabelStyle } from '@/features/labels/types/labelStyle'
 
 export function getBarcode(p: ProductWithDiff): string | null {
   if (!p.extra) return null
@@ -73,23 +73,27 @@ export function PriceChangeBadge({
   )
 }
 
-/** Columnas dinámicas del CSV, cada una con su tamaño y color propios. */
+/**
+ * Columnas dinámicas del CSV, cada una con su tamaño y color propios.
+ * Por defecto van una debajo de otra (Ubicación arriba del código); el
+ * negocio puede cambiar el orden o ponerlas en una sola línea.
+ */
 export function ExtraFields({
-  product, fields, style, sizeDelta = 0, joinWith = ' | ',
+  product, fields, style, sizeDelta = 0,
 }: {
   product: ProductWithDiff
   fields: string[]
   style: LabelStyle
   sizeDelta?: number
-  joinWith?: string
 }) {
-  const active = fields.filter((f) => product.extra?.[f])
+  const active = orderExtraFields(fields, style).filter((f) => product.extra?.[f])
   if (active.length === 0) return null
+  const stacked = style.extraLayout !== 'inline'
 
   return (
     <div style={{
-      lineHeight: 1.2, marginTop: '0.5mm',
-      overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+      lineHeight: 1.2, marginTop: '0.5mm', overflow: 'hidden',
+      ...(stacked ? {} : { whiteSpace: 'nowrap', textOverflow: 'ellipsis' }),
     }}>
       {active.map((f, i) => {
         const cfg = resolveExtraField(style, f)
@@ -98,8 +102,11 @@ export function ExtraFields({
             fontSize: `${Math.max(cfg.size + sizeDelta, 3.5)}px`,
             color: cfg.color,
             fontWeight: 600,
+            ...(stacked
+              ? { display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+              : {}),
           }}>
-            {i > 0 && joinWith}
+            {!stacked && i > 0 && ' | '}
             {cfg.showLabel ? `${f}: ` : ''}{product.extra?.[f]}
           </span>
         )

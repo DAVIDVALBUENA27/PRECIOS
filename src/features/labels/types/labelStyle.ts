@@ -50,6 +50,10 @@ export interface LabelStyle {
   logoY: number        // % vertical
   // Ajustes por columna del CSV: { "Inventario": { size: 7, color: "#333" } }
   extraOverrides: Record<string, FieldOverride>
+  /** Columnas del archivo: una debajo de otra o en la misma línea. */
+  extraLayout: 'stacked' | 'inline'
+  /** Orden de las columnas del archivo en la etiqueta (de arriba a abajo). */
+  extraOrder: string[]
 }
 
 export const DEFAULT_STYLE: LabelStyle = {
@@ -65,7 +69,7 @@ export const DEFAULT_STYLE: LabelStyle = {
   unitPriceFontSize: 9,
   skuFontSize: 7,
   labFontSize: 7,
-  extraFontSize: 6,
+  extraFontSize: 7,
   changeFontSize: 6,
   footerFontSize: 6,
   nameColor: '#000000',
@@ -81,6 +85,8 @@ export const DEFAULT_STYLE: LabelStyle = {
   logoX: 92,
   logoY: 12,
   extraOverrides: {},
+  extraLayout: 'stacked',
+  extraOrder: [],
 }
 
 /**
@@ -92,7 +98,29 @@ export function normalizeStyle(style: Partial<LabelStyle> | null | undefined): L
     ...DEFAULT_STYLE,
     ...(style ?? {}),
     extraOverrides: { ...(style?.extraOverrides ?? {}) },
+    extraOrder: [...(style?.extraOrder ?? [])],
   }
+}
+
+/** Ubicación primero: es lo que se busca en la góndola antes que el código. */
+function defaultRank(field: string): number {
+  const k = field.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')
+  return k.includes('ubica') ? 0 : 1
+}
+
+/**
+ * Orden de las columnas del archivo en la etiqueta: el que eligió el negocio
+ * (`extraOrder`); las que no ha ordenado van después, con Ubicación primero.
+ */
+export function orderExtraFields(fields: string[], style: LabelStyle): string[] {
+  const pos = (f: string) => {
+    const i = style.extraOrder.indexOf(f)
+    return i === -1 ? style.extraOrder.length + defaultRank(f) : i
+  }
+  return fields
+    .map((f, i) => ({ f, i, r: pos(f) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.f)
 }
 
 /** Tamaño y color efectivos de una columna del CSV. */
