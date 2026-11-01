@@ -16,9 +16,11 @@ interface ProductTableProps {
   labColors: Map<string, LabColor>
   onToggle: (uid: string) => void
   onToggleAll: (selected: boolean) => void
+  /** Encabezado de la columna de código, con el nombre que trae el archivo. */
+  skuLabel?: string
 }
 
-export function ProductTable({ products, labColors, onToggle, onToggleAll }: ProductTableProps) {
+export function ProductTable({ products, labColors, onToggle, onToggleAll, skuLabel = 'Código' }: ProductTableProps) {
   const allSelected = products.length > 0 && products.every((p) => p.selected)
 
   // Extraer las columnas extra dinámicas de todos los productos
@@ -48,7 +50,7 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll }: Pro
               />
             </th>
             <th className="px-4 py-3">Producto</th>
-            <th className="px-4 py-3">SKU</th>
+            <th className="px-4 py-3">{skuLabel}</th>
             <th className="px-4 py-3">Precio actual</th>
             <th className="px-4 py-3">Precio anterior</th>
             <th className="px-4 py-3">Precio/unidad</th>

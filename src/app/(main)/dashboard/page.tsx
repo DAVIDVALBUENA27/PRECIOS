@@ -18,6 +18,8 @@ import {
 } from '@/features/labels/lib/changeGroups'
 import { ProductWithDiff, RawProduct } from '@/features/labels/types'
 import { compareWithSnapshot } from '@/features/labels/lib/compareProducts'
+import { rowsToProducts } from '@/features/labels/lib/parseFile'
+import { findColumnSetup, extrasToInclude } from '@/features/labels/lib/columnMemory'
 import { useLabColors } from '@/features/labels/hooks/useLabColors'
 import { DEMO_DAY1, DEMO_DAY2 } from '@/features/labels/lib/demoData'
 import {
@@ -50,6 +52,10 @@ export default function DashboardPage() {
   const [snapshotLoaded, setSnapshotLoaded] = useState(false)
   const [isFirstUpload, setIsFirstUpload] = useState(false)
   const [saving, setSaving] = useState(false)
+  // true si las columnas del archivo se conectaron solas (sin pantalla de columnas)
+  const [autoMapped, setAutoMapped] = useState(false)
+  // Nombre real de la columna usada como código (ej. "Código Barras")
+  const [skuLabel, setSkuLabel] = useState('Código')
 
   // Perfil del negocio (logo, color, NIT) para las etiquetas
   const [business, setBusiness] = useState<Business | null>(null)
@@ -211,6 +217,21 @@ export default function DashboardPage() {
   function handleRows(parsedRows: string[][], name: string) {
     setRows(parsedRows)
     setFileName(name)
+
+    // Columnas conocidas (formato Maestro o ya confirmadas antes): se conectan
+    // solas y se va directo a revisar. Si algo no cuadra, "Ajustar columnas".
+    const headers = (parsedRows[0] ?? []).map((h) => String(h).trim())
+    const setup = findColumnSetup(headers)
+    if (setup) {
+      const parsed = rowsToProducts(parsedRows, setup.mapping, headers, extrasToInclude(headers, setup.excluded))
+      if (parsed.length > 0) {
+        setAutoMapped(true)
+        setSkuLabel(headers[setup.mapping.sku] || 'Código')
+        void handleConfirm(parsed)
+        return
+      }
+    }
+    setAutoMapped(false)
     setStep('mapping')
   }
 
@@ -413,7 +434,11 @@ export default function DashboardPage() {
         <ColMapper
           rows={rows}
           fileName={fileName}
-          onConfirm={handleConfirm}
+          onConfirm={(parsed, mapping) => {
+            setAutoMapped(false)
+            setSkuLabel(String(rows[0]?.[mapping.sku] ?? '').trim() || 'Código')
+            void handleConfirm(parsed)
+          }}
           onBack={() => setStep('upload')}
         />
       )}
@@ -431,6 +456,11 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                 </svg>
                 {fileName}
+                {autoMapped && (
+                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                    Columnas conectadas automáticamente
+                  </span>
+                )}
                 {saving && (
                   <span className="flex items-center gap-1 text-xs text-blue-500">
                     <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -450,6 +480,15 @@ export default function DashboardPage() {
               >
                 ← Cargar otro archivo
               </button>
+              {rows.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStep('mapping')}
+                  className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Ajustar columnas
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setStep('preview')}
@@ -555,6 +594,7 @@ export default function DashboardPage() {
             labColors={labColors}
             onToggle={toggleProduct}
             onToggleAll={toggleAll}
+            skuLabel={skuLabel}
           />
         </div>
       )}

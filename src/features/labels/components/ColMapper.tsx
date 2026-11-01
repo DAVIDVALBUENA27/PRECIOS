@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { z } from 'zod'
 import { RawProduct, ColMapping } from '@/features/labels/types'
 import { autoDetectColumns, rowsToProducts } from '@/features/labels/lib/parseFile'
+import { findColumnSetup, rememberColumnSetup } from '@/features/labels/lib/columnMemory'
 
 const colIndex = z.number().int().min(0)
 
@@ -43,7 +44,11 @@ type Selection = Record<keyof ColMapping, number | null>
 export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps) {
   const headers = useMemo(() => rows[0].map((h) => String(h).trim()), [rows])
 
+  // Columnas ya conocidas (formato Maestro o confirmadas antes) o detectadas
+  const known = useMemo(() => findColumnSetup(headers), [headers])
+
   const [selection, setSelection] = useState<Selection>(() => {
+    if (known) return { ...known.mapping }
     const detected = autoDetectColumns(headers)
     return {
       name: detected.name ?? null,
@@ -57,7 +62,7 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
 
   // Columnas del archivo sin rol fijo: se imprimen como datos extra si el
   // negocio las deja marcadas.
-  const [excluded, setExcluded] = useState<Set<string>>(new Set())
+  const [excluded, setExcluded] = useState<Set<string>>(() => new Set(known?.excluded ?? []))
 
   const roleByIndex = useMemo(() => {
     const map = new Map<number, string>()
@@ -115,6 +120,8 @@ export function ColMapper({ rows, fileName, onConfirm, onBack }: ColMapperProps)
       return
     }
 
+    // La próxima vez que llegue un archivo con estas columnas, se conectan solas
+    rememberColumnSetup(headers, { mapping: result.data as ColMapping, excluded: Array.from(excluded) })
     onConfirm(products, result.data as ColMapping)
   }
 

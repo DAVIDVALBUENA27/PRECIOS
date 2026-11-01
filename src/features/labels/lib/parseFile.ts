@@ -68,8 +68,10 @@ export function decodeCsv(buffer: ArrayBuffer): string {
 }
 
 export function parseWorkbook(buffer: ArrayBuffer | string, isCsv: boolean): string[][] {
+  // CSV: `raw` deja cada celda como texto tal cual. Sin esto, la ubicación
+  // "10-1" se convertía en fecha (37165) y "$ 39.700,00" en 39.7.
   const wb = isCsv
-    ? XLSX.read(buffer as string, { type: 'string' })
+    ? XLSX.read(buffer as string, { type: 'string', raw: true })
     : XLSX.read(new Uint8Array(buffer as ArrayBuffer), { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
   return XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as string[][]
@@ -179,9 +181,14 @@ export function rowsToProducts(
         extra[key] = String(r[index] ?? '').trim()
       })
 
+      // Sin código principal (ej. producto sin código de barras): se usa otro
+      // código del archivo, para que no quede sin identificar en el historial.
+      const mainCode = String(r[map.sku] ?? '').trim()
+      const sku = mainCode || fallbackCode(extra)
+
       return {
         name: productName,
-        sku: String(r[map.sku] ?? '').trim(),
+        sku,
         price,
         lab: map.lab !== null
           ? String(r[map.lab] ?? 'Sin laboratorio').trim()
@@ -193,6 +200,15 @@ export function rowsToProducts(
       }
     })
     .filter(p => p.name || p.sku)
+}
+
+/** Primer valor de una columna extra que sea un código ("Código Producto"…). */
+function fallbackCode(extra: Record<string, string>): string {
+  for (const [key, value] of Object.entries(extra)) {
+    const k = key.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')
+    if (value && /digo|referencia|sku|plu/.test(k)) return value
+  }
+  return ''
 }
 
 function parsePrice(v: unknown): number | null {
