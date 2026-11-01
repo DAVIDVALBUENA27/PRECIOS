@@ -151,6 +151,7 @@ export default function DashboardPage() {
     setProducts((ps) => ps.map((p) => ({ ...p, selected: groupOf(p) !== null })))
   }
 
+  /** Desmarca TODO (también lo que no se ve por búsqueda o filtros). */
   function clearGroups() {
     setActiveGroups([])
     setOnlyActive(false)
@@ -487,6 +488,15 @@ export default function DashboardPage() {
                   className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
                 >
                   Ajustar columnas
+                </button>
+              )}
+              {selectedProducts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearGroups}
+                  className="rounded-lg border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  Deseleccionar todo ({selectedProducts.length.toLocaleString('es-CO')})
                 </button>
               )}
               <button
