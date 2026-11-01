@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ProductWithDiff } from '@/features/labels/types'
 import { LabColor } from '@/features/labels/hooks/useLabColors'
 import { LabelStylePanel } from './LabelStylePanel'
-import { DEFAULT_STYLE, type LabelStyle, type PaperSize } from '@/features/labels/types/labelStyle'
+import { DEFAULT_STYLE, normalizeStyle, type LabelStyle, type PaperSize } from '@/features/labels/types/labelStyle'
 import { SingleTag } from './tags/SingleTag'
 import { GroupedTag } from './tags/GroupedTag'
 import { DoubleTag } from './tags/DoubleTag'
@@ -24,6 +24,21 @@ function calcGrid(style: LabelStyle) {
   const cols = Math.max(1, Math.floor(cfg.usableW / style.labelWidth))
   const rows = Math.max(1, Math.floor(cfg.usableH / style.labelHeight))
   return { cols, perSheet: cols * rows, ...cfg }
+}
+
+// El último diseño y los campos visibles se recuerdan en este equipo
+const LS_STYLE = 'precios_label_style_v1'
+const LS_FIELDS = 'precios_label_fields_v1'
+
+function readLocal<T>(key: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : null
+  } catch { return null }
+}
+
+function writeLocal(key: string, value: unknown) {
+  try { window.localStorage.setItem(key, JSON.stringify(value)) } catch { /* sin espacio: no pasa nada */ }
 }
 
 export type PrintMode = 'individual' | 'agrupado-tamanos' | 'doble-independiente'
@@ -54,7 +69,13 @@ export function PrintPreview({
   onBack,
 }: PrintPreviewProps) {
   const [printMode, setPrintMode] = useState<PrintMode>('individual')
-  const [labelStyle, setLabelStyle] = useState<LabelStyle>(DEFAULT_STYLE)
+  const [labelStyle, setLabelStyle] = useState<LabelStyle>(
+    () => normalizeStyle(readLocal<Partial<LabelStyle>>(LS_STYLE) ?? DEFAULT_STYLE),
+  )
+  useEffect(() => writeLocal(LS_STYLE, labelStyle), [labelStyle])
+
+  // Zoom solo para ver en pantalla; al imprimir sale a tamaño real
+  const [zoom, setZoom] = useState(1.5)
 
   // Drag & drop — orden en modo doble-independiente
   const [dndOrder, setDndOrder] = useState<number[]>(() => products.map((_, i) => i))
@@ -84,7 +105,9 @@ export function PrintPreview({
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>(() => ({
     lab: true, sku: true, barcode: true, unitPrice: true,
     logo: !!logoUrl, priceChange: false,
+    ...(readLocal<Record<string, boolean>>(LS_FIELDS) ?? {}),
   }))
+  useEffect(() => writeLocal(LS_FIELDS, visibleFields), [visibleFields])
 
   function toggleField(field: string) {
     setVisibleFields((prev) => ({ ...prev, [field]: !prev[field] }))
@@ -143,6 +166,7 @@ export function PrintPreview({
   }
 
   const dynamicCSS = `
+    @media print { #print-area { zoom: 1 !important; } }
     @page {
       size: ${grid.page};
       margin: ${grid.margin};
@@ -210,7 +234,7 @@ export function PrintPreview({
         {/* ── Columna izquierda: controles ── */}
         <aside className="space-y-4 print:hidden lg:sticky lg:top-4 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-1 lg:pb-4">
 
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <button
               type="button"
               onClick={() => window.print()}
@@ -247,7 +271,7 @@ export function PrintPreview({
           </div>
 
           {/* Campos visibles */}
-          <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-700">
               Qué mostrar
             </h3>
@@ -289,6 +313,7 @@ export function PrintPreview({
             onChange={setLabelStyle}
             extraFields={allExtraFields.filter((f) => visibleFields[f])}
             hasLogo={Boolean(logoUrl && visibleFields.logo)}
+            perSheet={grid.perSheet}
           />
         </aside>
 
@@ -301,8 +326,19 @@ export function PrintPreview({
             </p>
           )}
 
-          <div className="overflow-auto rounded-lg border border-gray-200 bg-gray-100 p-6 lg:max-h-[calc(100vh-5rem)] print:max-h-none print:overflow-visible print:rounded-none print:border-0 print:bg-white print:p-0">
-            <div id="print-area" className="print-grid mx-auto w-fit bg-white shadow-sm print:shadow-none">
+          <div className="mb-2 flex items-center justify-end gap-1 print:hidden">
+            <span className="mr-1 text-xs text-slate-400">Vista previa</span>
+            {[1, 1.5, 2].map((z) => (
+              <button key={z} type="button" onClick={() => setZoom(z)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  zoom === z ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-800'
+                }`}>
+                {z === 1 ? 'Tamaño real' : `${z * 100}%`}
+              </button>
+            ))}
+          </div>
+          <div className="overflow-auto rounded-2xl border border-slate-200 bg-slate-100 p-6 lg:max-h-[calc(100vh-5rem)] print:max-h-none print:overflow-visible print:rounded-none print:border-0 print:bg-white print:p-0">
+            <div id="print-area" className="print-grid mx-auto w-fit bg-white shadow-sm print:shadow-none" style={{ zoom }}>
               {tagsToPrint.map((tag, tagIdx) => {
                 if (tag.isIndependentDouble) {
                   return (

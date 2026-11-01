@@ -85,7 +85,7 @@ export function DoubleTag({
 
             {visibleFields.priceChange && <PriceChangeBadge p={p} style={style} mini />}
 
-            <ExtraFields product={p} fields={activeExtras} style={style} sizeDelta={-1.5} />
+            <ExtraFields product={p} fields={activeExtras} style={style} sizeDelta={-0.5} />
 
             <div className="mini-details" style={{ fontSize: `${style.skuFontSize}px`, color: style.skuColor }}>
               {visibleFields.sku && <div className="truncate max-w-full">SKU: {p.sku}</div>}
