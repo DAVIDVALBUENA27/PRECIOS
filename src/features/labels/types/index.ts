@@ -20,6 +20,12 @@ export interface RawProduct {
 }
 
 export interface ProductWithDiff extends RawProduct {
+  /**
+   * Identificador único de la fila. NO usar el SKU para esto: si dos filas del
+   * archivo comparten código (o vienen sin código), al marcar una se marcaba
+   * también la otra y en la tabla se veía el nombre de otro producto.
+   */
+  uid: string
   oldPrice: number | null
   oldUnitPrice: number | null
   changed: boolean

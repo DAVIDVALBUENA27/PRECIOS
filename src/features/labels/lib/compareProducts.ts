@@ -44,13 +44,14 @@ export function compareWithSnapshot(
   // Solo tiene sentido hablar de "productos nuevos" si ya había un listado
   // anterior con el cual comparar. En la primera carga nada es "nuevo".
   const hasSnapshot = snapshot.length > 0
-  return today.map((p) => {
+  return today.map((p, i) => {
     let best = -1
     for (const code of productCodes(p)) best = Math.max(best, byCode.get(code) ?? -1)
     const prev = best >= 0 ? snapshot[best] : undefined
     const oldPrice = prev?.price != null ? Math.round(prev.price) : null
     return {
       ...p,
+      uid: `p${i}`,
       oldPrice,
       oldUnitPrice: prev ? prev.unitPrice : null,
       // Se compara en pesos enteros: decimales sueltos no son un cambio real

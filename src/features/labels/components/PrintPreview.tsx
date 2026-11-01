@@ -339,7 +339,7 @@ export function PrintPreview({
 
                 return (
                   <SingleTag
-                    key={`${tag.products[0].sku}-${tagIdx}`}
+                    key={`${tag.products[0].uid}-${tagIdx}`}
                     product={tag.products[0]}
                     style={labelStyle}
                     tagStyle={tagStyle}
