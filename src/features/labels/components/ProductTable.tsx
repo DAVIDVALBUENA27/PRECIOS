@@ -21,7 +21,9 @@ interface ProductTableProps {
 }
 
 export function ProductTable({ products, labColors, onToggle, onToggleAll, skuLabel = 'Código' }: ProductTableProps) {
-  const allSelected = products.length > 0 && products.every((p) => p.selected)
+  const selectedCount = products.filter((p) => p.selected).length
+  const allSelected = products.length > 0 && selectedCount === products.length
+  const someSelected = selectedCount > 0 && !allSelected
 
   // Extraer las columnas extra dinámicas de todos los productos
   const extraCols = useMemo(() => {
@@ -44,9 +46,12 @@ export function ProductTable({ products, labColors, onToggle, onToggleAll, skuLa
               <input
                 type="checkbox"
                 checked={allSelected}
-                onChange={(e) => onToggleAll(e.target.checked)}
+                ref={(el) => { if (el) el.indeterminate = someSelected }}
+                // Si hay alguno marcado, el clic desmarca; si no hay ninguno, marca todos
+                onChange={() => onToggleAll(selectedCount === 0)}
                 className="accent-blue-600"
-                aria-label="Seleccionar todos"
+                aria-label={selectedCount > 0 ? 'Desmarcar los de esta lista' : 'Marcar todos los de esta lista'}
+                title={selectedCount > 0 ? 'Desmarcar los de esta lista' : 'Marcar todos los de esta lista'}
               />
             </th>
             <th className="px-4 py-3">Producto</th>
