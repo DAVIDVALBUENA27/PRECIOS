@@ -38,14 +38,6 @@ interface Props {
   perSheet?: number
 }
 
-const SIZE_PRESETS = [
-  { w: 50, h: 30 },
-  { w: 60, h: 40 },
-  { w: 70, h: 40 },
-  { w: 80, h: 40 },
-  { w: 100, h: 50 },
-]
-
 const LOGO_PRESETS = [
   { label: '↖', x: 8, y: 12 }, { label: '↑', x: 50, y: 12 }, { label: '↗', x: 92, y: 12 },
   { label: '←', x: 8, y: 50 }, { label: '•', x: 50, y: 50 }, { label: '→', x: 92, y: 50 },
@@ -139,39 +131,15 @@ export function LabelStylePanel({ style, onChange, extraFields = [], hasLogo = f
       </div>
 
       {/* ── Tamaño ── */}
-      <Section icon="📐" title="Tamaño de la etiqueta" hint={`${style.labelWidth}×${style.labelHeight} mm`} defaultOpen>
+      <Section icon="📐" title="Hoja" hint={style.paper === 'carta' ? 'Carta' : 'Oficio'}>
         <Segmented<PaperSize>
           value={style.paper}
           options={[{ value: 'carta', label: 'Hoja carta' }, { value: 'oficio', label: 'Hoja oficio' }]}
           onChange={(v) => set('paper', v)}
         />
-        <div className="space-y-2">
-          <SubLabel>Tamaños comunes</SubLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {SIZE_PRESETS.map(({ w, h }) => {
-              const on = style.labelWidth === w && style.labelHeight === h
-              return (
-                <button
-                  key={`${w}x${h}`}
-                  type="button"
-                  onClick={() => onChange({ ...style, labelWidth: w, labelHeight: h })}
-                  className={`rounded-lg border px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors ${
-                    on ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 text-slate-600 hover:border-blue-400'
-                  }`}
-                >
-                  {w}×{h}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-        <SizeRow label="Ancho" value={style.labelWidth} min={30} max={120} step={1} unit="mm"
-          onSize={(v) => set('labelWidth', v)} />
-        <SizeRow label="Alto" value={style.labelHeight} min={20} max={80} step={1} unit="mm"
-          onSize={(v) => set('labelHeight', v)} />
         {perSheet !== undefined && (
           <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-            Caben <strong>{perSheet}</strong> etiquetas por hoja.
+            Etiqueta estándar de <strong>8 × 4 cm</strong>. Caben <strong>{perSheet}</strong> por hoja.
           </p>
         )}
       </Section>
