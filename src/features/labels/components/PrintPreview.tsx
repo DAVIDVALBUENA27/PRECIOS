@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ProductWithDiff } from '@/features/labels/types'
 import { LabColor } from '@/features/labels/hooks/useLabColors'
 import { LabelStylePanel } from './LabelStylePanel'
+import { PrintCalibration } from './PrintCalibration'
 import { DEFAULT_STYLE, normalizeStyle, type LabelStyle, type PaperSize } from '@/features/labels/types/labelStyle'
 import { SingleTag } from './tags/SingleTag'
 import { GroupedTag } from './tags/GroupedTag'
@@ -21,8 +22,10 @@ const PAPER_CFG: Record<PaperSize, { page: string; usableW: number; usableH: num
 
 function calcGrid(style: LabelStyle) {
   const cfg = PAPER_CFG[style.paper]
-  const cols = Math.max(1, Math.floor(cfg.usableW / style.labelWidth))
-  const rows = Math.max(1, Math.floor(cfg.usableH / style.labelHeight))
+  // Con ajuste de impresora la etiqueta ocupa más en la hoja "virtual"
+  const s = style.printScale || 1
+  const cols = Math.max(1, Math.floor(cfg.usableW / (style.labelWidth * s)))
+  const rows = Math.max(1, Math.floor(cfg.usableH / (style.labelHeight * s)))
   return { cols, perSheet: cols * rows, ...cfg }
 }
 
@@ -39,6 +42,28 @@ function readLocal<T>(key: string): T | null {
 
 function writeLocal(key: string, value: unknown) {
   try { window.localStorage.setItem(key, JSON.stringify(value)) } catch { /* sin espacio: no pasa nada */ }
+}
+
+/** Regla de 10 cm para la hoja de prueba (a tamaño real, como las etiquetas). */
+function TestRuler() {
+  return (
+    <div style={{ gridColumn: '1 / -1', paddingTop: '6mm', fontFamily: 'sans-serif' }}>
+      <div style={{ position: 'relative', width: '100mm', height: '6mm', borderBottom: '0.6pt solid #000' }}>
+        {Array.from({ length: 11 }, (_, cm) => (
+          <span key={cm} style={{
+            position: 'absolute', left: `${cm * 10}mm`, bottom: 0,
+            height: cm % 5 === 0 ? '6mm' : '4mm', borderLeft: '0.6pt solid #000',
+          }}>
+            <span style={{ position: 'absolute', top: '-3.5mm', left: '0.5mm', fontSize: '7pt' }}>{cm}</span>
+          </span>
+        ))}
+      </div>
+      <p style={{ fontSize: '8pt', marginTop: '2mm' }}>
+        Esta regla mide 10 cm y la etiqueta de arriba debe medir 8 × 4 cm. Si no coinciden,
+        escribe en la app cuánto midió el ancho de la etiqueta.
+      </p>
+    </div>
+  )
 }
 
 export type PrintMode = 'individual' | 'agrupado-tamanos' | 'doble-independiente'
@@ -157,6 +182,18 @@ export function PrintPreview({
 
   const sheets = Math.ceil(tagsToPrint.length / grid.perSheet)
 
+  // Hoja de prueba: imprime una sola etiqueta y una regla para medir
+  const [testPrint, setTestPrint] = useState(false)
+  useEffect(() => {
+    if (!testPrint) return
+    const id = setTimeout(() => {
+      window.print()
+      setTestPrint(false)
+    }, 100)
+    return () => clearTimeout(id)
+  }, [testPrint])
+  const shownTags = testPrint ? tagsToPrint.slice(0, 1) : tagsToPrint
+
   const tagStyle: React.CSSProperties = {
     backgroundColor: labelStyle.bgColor,
     borderColor: labelStyle.borderColor,
@@ -166,7 +203,7 @@ export function PrintPreview({
   }
 
   const dynamicCSS = `
-    @media print { #print-area { zoom: 1 !important; } }
+    @media print { #print-area { zoom: ${labelStyle.printScale || 1} !important; } }
     @page {
       size: ${grid.page};
       margin: ${grid.margin};
@@ -244,8 +281,8 @@ export function PrintPreview({
               Imprimir {tagsToPrint.length} etiquetas
             </button>
             <p className="text-[11px] leading-snug text-gray-500">
-              En el diálogo de impresión usa <strong>escala 100%</strong> (no «ajustar a página»)
-              para que salgan al tamaño exacto.
+              En el diálogo de impresión usa <strong>Escala: Predeterminada</strong> (no «ajustar a página»).
+              Abajo hay una hoja de prueba para verificar con la regla.
             </p>
 
             <div className="space-y-1.5 border-t border-gray-100 pt-3">
@@ -308,6 +345,12 @@ export function PrintPreview({
             </div>
           </div>
 
+          <PrintCalibration
+            scale={labelStyle.printScale || 1}
+            onScale={(v) => setLabelStyle({ ...labelStyle, printScale: v })}
+            onTestPrint={() => setTestPrint(true)}
+          />
+
           <LabelStylePanel
             style={labelStyle}
             onChange={setLabelStyle}
@@ -339,7 +382,7 @@ export function PrintPreview({
           </div>
           <div className="overflow-auto rounded-2xl border border-slate-200 bg-slate-100 p-6 lg:max-h-[calc(100vh-5rem)] print:max-h-none print:overflow-visible print:rounded-none print:border-0 print:bg-white print:p-0">
             <div id="print-area" className="print-grid mx-auto w-fit bg-white shadow-sm print:shadow-none" style={{ zoom }}>
-              {tagsToPrint.map((tag, tagIdx) => {
+              {shownTags.map((tag, tagIdx) => {
                 if (tag.isIndependentDouble) {
                   return (
                     <DoubleTag
@@ -389,6 +432,7 @@ export function PrintPreview({
                   />
                 )
               })}
+              {testPrint && <TestRuler />}
             </div>
           </div>
         </section>

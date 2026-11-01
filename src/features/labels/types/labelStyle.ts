@@ -6,6 +6,10 @@
 
 export type PaperSize = 'carta' | 'oficio'
 
+/** Tamaño estándar del negocio: todas las etiquetas son de 8 × 4 cm. */
+export const LABEL_WIDTH_MM = 80
+export const LABEL_HEIGHT_MM = 40
+
 /** Ajuste opcional por columna dinámica del CSV. */
 export interface FieldOverride {
   size?: number
@@ -17,8 +21,13 @@ export interface FieldOverride {
 export interface LabelStyle {
   // Papel y tamaño
   paper: PaperSize
-  labelWidth: number   // mm  (50–100)
-  labelHeight: number  // mm  (30–60)
+  labelWidth: number   // mm — fijo en 80 (estándar)
+  labelHeight: number  // mm — fijo en 40 (estándar)
+  /**
+   * Ajuste de impresora: factor para compensar una impresora o configuración
+   * que reduce la hoja (1 = sin ajuste; 80/60 si la etiqueta salía de 6 cm).
+   */
+  printScale: number
   // Fondo y borde
   bgColor: string
   borderColor: string
@@ -58,8 +67,9 @@ export interface LabelStyle {
 
 export const DEFAULT_STYLE: LabelStyle = {
   paper: 'carta',
-  labelWidth: 80,
-  labelHeight: 40,
+  labelWidth: LABEL_WIDTH_MM,
+  labelHeight: LABEL_HEIGHT_MM,
+  printScale: 1,
   bgColor: '#ffffff',
   borderColor: '#999999',
   borderWidth: 0.5,
@@ -99,6 +109,9 @@ export function normalizeStyle(style: Partial<LabelStyle> | null | undefined): L
     ...(style ?? {}),
     extraOverrides: { ...(style?.extraOverrides ?? {}) },
     extraOrder: [...(style?.extraOrder ?? [])],
+    // El tamaño es estándar: plantillas o diseños viejos con otro tamaño se corrigen
+    labelWidth: LABEL_WIDTH_MM,
+    labelHeight: LABEL_HEIGHT_MM,
   }
 }
 
