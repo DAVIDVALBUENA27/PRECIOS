@@ -10,7 +10,8 @@
  */
 
 import { useEffect, useState } from 'react'
-import { LABEL_WIDTH_MM } from '@/features/labels/types/labelStyle'
+/** Largo de la regla de la hoja de prueba. */
+const RULER_CM = 10
 
 interface Props {
   /** 1 = sin ajuste. */
@@ -59,11 +60,17 @@ export function PrintCalibration({ scale, onScale, onTestPrint }: Props) {
   const zoomOff = zoom !== null && Math.abs(zoom - 1) >= 0.1
   const adjusted = Math.abs(scale - 1) > 0.001
 
+  const measuredCm = Number(measured.replace(',', '.'))
+  const validMeasure = measuredCm >= 5 && measuredCm <= 15
+
+  /**
+   * La regla de la hoja de prueba mide 10 cm en la app. Si en papel midió
+   * `cm`, la impresión se está reduciendo (o agrandando) en cm/10 y se
+   * compensa. Si ya había un ajuste, el nuevo corrige sobre el actual.
+   */
   function applyMeasure() {
-    const cm = Number(measured.replace(',', '.'))
-    if (!cm || cm < 3 || cm > 15) return
-    // Si con el ajuste actual salió `cm`, el ajuste nuevo corrige sobre el actual
-    onScale(Math.round(((LABEL_WIDTH_MM / 10 / cm) * scale) * 1000) / 1000)
+    if (!validMeasure) return
+    onScale(Math.round(((RULER_CM / measuredCm) * scale) * 1000) / 1000)
     setMeasured('')
   }
 
@@ -100,10 +107,11 @@ export function PrintCalibration({ scale, onScale, onTestPrint }: Props) {
       </button>
 
       <div className="space-y-2 border-t border-slate-100 pt-3">
-        <p className="text-xs font-semibold text-slate-700">¿Sigue saliendo de otro tamaño?</p>
+        <p className="text-xs font-semibold text-slate-700">¿La regla impresa no mide 10 cm?</p>
         <p className="text-[11px] leading-snug text-slate-500">
-          Mide con la regla el <strong>ancho</strong> de la etiqueta impresa y escríbelo. La app compensa tu
-          impresora y lo recuerda.
+          Mide con tu regla la regla impresa en la hoja de prueba, de 0 a 10, y escribe cuánto midió.
+          Ej: si cada centímetro impreso mide 8 mm, escribe <strong>8</strong>. La app compensa tu
+          impresora y lo recuerda en este computador.
         </p>
         <div className="flex gap-2">
           <label className="flex flex-1 items-center rounded-lg border border-slate-200 px-2 focus-within:border-blue-400">
@@ -113,7 +121,7 @@ export function PrintCalibration({ scale, onScale, onTestPrint }: Props) {
               value={measured}
               onChange={(e) => setMeasured(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyMeasure()}
-              placeholder="Ej: 6"
+              placeholder="Ej: 8"
               className="w-full bg-transparent py-1.5 text-xs outline-none"
             />
             <span className="text-[11px] text-slate-400">cm</span>
@@ -121,15 +129,20 @@ export function PrintCalibration({ scale, onScale, onTestPrint }: Props) {
           <button
             type="button"
             onClick={applyMeasure}
-            className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900"
+            disabled={!validMeasure}
+            className="rounded-lg bg-slate-800 disabled:opacity-40 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900"
           >
             Ajustar
           </button>
         </div>
+        {measured && !validMeasure && (
+          <p className="text-[11px] text-amber-700">Escribe la medida en centímetros, entre 5 y 15.</p>
+        )}
         {adjusted && (
           <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2">
             <p className="text-[11px] text-emerald-800">
-              Ajuste activo: <strong>{Math.round(scale * 100)}%</strong>. Imprime la hoja de prueba para confirmar.
+              Ajuste activo: <strong>{Math.round(scale * 100)}%</strong>. Imprime otra hoja de prueba: la regla
+              debe medir 10 cm y la etiqueta 8 × 4 cm.
             </p>
             <button type="button" onClick={() => onScale(1)}
               className="shrink-0 text-[11px] font-medium text-emerald-700 underline">
