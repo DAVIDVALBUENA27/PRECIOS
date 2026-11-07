@@ -65,12 +65,12 @@ export function SingleTag({
       <div className="tag-sku-row flex justify-between items-center mt-0.5">
         {visibleFields.sku && (
           <span className="tag-sku" style={{ fontSize: `${style.skuFontSize}px`, color: style.skuColor }}>
-            SKU: {p.sku}
+            {visibleFields.codeLabels !== false && 'SKU: '}{p.sku}
           </span>
         )}
         {visibleFields.barcode && barcode && (
           <span className="tag-barcode font-mono" style={{ fontSize: `${style.skuFontSize}px`, color: style.skuColor }}>
-            Barras: {barcode}
+            {visibleFields.codeLabels !== false && 'Barras: '}{barcode}
           </span>
         )}
       </div>

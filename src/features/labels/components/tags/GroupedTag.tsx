@@ -72,9 +72,9 @@ export function GroupedTag({
               {visibleFields.priceChange && <PriceChangeBadge p={p} style={style} mini />}
               <ExtraFields product={p} fields={activeExtras} style={style} sizeDelta={-1} />
               <div className="flex flex-col" style={{ fontSize: `${style.skuFontSize}px`, color: style.skuColor }}>
-                {visibleFields.sku && <span className="truncate max-w-full">SKU: {p.sku}</span>}
+                {visibleFields.sku && <span className="truncate max-w-full">{visibleFields.codeLabels !== false && 'SKU: '}{p.sku}</span>}
                 {visibleFields.barcode && barcode && (
-                  <span className="truncate max-w-full font-mono font-bold">Bar: {barcode}</span>
+                  <span className="truncate max-w-full font-mono font-bold">{visibleFields.codeLabels !== false && 'Bar: '}{barcode}</span>
                 )}
                 {visibleFields.unitPrice && unitPrice && (
                   <span className="font-semibold" style={{

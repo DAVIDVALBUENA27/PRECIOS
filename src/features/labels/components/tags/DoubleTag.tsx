@@ -88,9 +88,9 @@ export function DoubleTag({
             <ExtraFields product={p} fields={activeExtras} style={style} sizeDelta={-0.5} />
 
             <div className="mini-details" style={{ fontSize: `${style.skuFontSize}px`, color: style.skuColor }}>
-              {visibleFields.sku && <div className="truncate max-w-full">SKU: {p.sku}</div>}
+              {visibleFields.sku && <div className="truncate max-w-full">{visibleFields.codeLabels !== false && 'SKU: '}{p.sku}</div>}
               {visibleFields.barcode && barcode && (
-                <div className="truncate max-w-full font-mono font-bold">Bar: {barcode}</div>
+                <div className="truncate max-w-full font-mono font-bold">{visibleFields.codeLabels !== false && 'Bar: '}{barcode}</div>
               )}
               {visibleFields.unitPrice && unitPrice && (
                 <div className="font-semibold" style={{

@@ -20,6 +20,25 @@ interface Props {
 }
 
 /** Zoom del navegador aproximado (Chrome/Edge): 1 = 100 %. */
+export function readBrowserZoom(): number | null {
+  if (typeof window === 'undefined' || !window.innerWidth || !window.outerWidth) return null
+  return Math.round((window.outerWidth / window.innerWidth) * 20) / 20
+}
+
+/**
+ * Antes de imprimir: si el navegador no está al 100 %, las etiquetas pueden
+ * salir más pequeñas (ej. zoom 75 % → 6 × 3 cm). Pide confirmación.
+ */
+export function confirmZoomBeforePrint(): boolean {
+  const zoom = readBrowserZoom()
+  if (zoom === null || Math.abs(zoom - 1) < 0.1) return true
+  return window.confirm(
+    `Tu navegador está con zoom de ${Math.round(zoom * 100)}%. Así las etiquetas pueden salir de otro tamaño (no de 8 × 4 cm).\n\n` +
+    'Cancela, presiona Ctrl + 0 para dejarlo en 100% y vuelve a tocar Imprimir.\n\n' +
+    '¿Imprimir de todas formas?',
+  )
+}
+
 function useBrowserZoom(): number | null {
   const [zoom, setZoom] = useState<number | null>(null)
   useEffect(() => {
