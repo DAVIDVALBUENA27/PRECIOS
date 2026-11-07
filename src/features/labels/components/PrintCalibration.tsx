@@ -11,13 +11,15 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { BUSINESS_PRINT_SCALE } from '@/features/labels/types/labelStyle'
 /** Largo de la regla de la hoja de prueba. */
 const RULER_CM = 10
 
 interface Props {
   /** 1 = sin ajuste. */
   scale: number
-  onScale: (scale: number) => void
+  /** calibrated = false vuelve al ajuste estándar del negocio. */
+  onScale: (scale: number, calibrated: boolean) => void
   onTestPrint: () => void
   /** Sube en 1 cada vez que se imprime una hoja de prueba. */
   testPrintedCount?: number
@@ -66,7 +68,7 @@ export function PrintCalibration({ scale, onScale, onTestPrint, testPrintedCount
   }, [testPrintedCount])
   const zoom = useBrowserZoom()
   const zoomOff = zoom !== null && Math.abs(zoom - 1) >= 0.1
-  const adjusted = Math.abs(scale - 1) > 0.001
+  const isStandard = Math.abs(scale - BUSINESS_PRINT_SCALE) < 0.001
 
   const measuredCm = Number(measured.replace(',', '.'))
   const validMeasure = measuredCm >= 5 && measuredCm <= 15
@@ -78,7 +80,7 @@ export function PrintCalibration({ scale, onScale, onTestPrint, testPrintedCount
    */
   function applyMeasure() {
     if (!validMeasure) return
-    onScale(Math.round(((RULER_CM / measuredCm) * scale) * 1000) / 1000)
+    onScale(Math.round(((RULER_CM / measuredCm) * scale) * 1000) / 1000, true)
     setMeasured('')
     setAsking(false)
   }
@@ -191,18 +193,19 @@ export function PrintCalibration({ scale, onScale, onTestPrint, testPrintedCount
         {measured && !validMeasure && (
           <p className="text-[11px] text-amber-700">Escribe la medida en centímetros, entre 5 y 15.</p>
         )}
-        {adjusted && (
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2">
-            <p className="text-[11px] text-emerald-800">
-              Ajuste activo: <strong>{Math.round(scale * 100)}%</strong>. Imprime otra hoja de prueba: la regla
-              debe medir 10 cm y la etiqueta 8 × 4 cm.
-            </p>
-            <button type="button" onClick={() => onScale(1)}
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2">
+          <p className="text-[11px] text-emerald-800">
+            {isStandard
+              ? <>✓ Calibrada para la impresora del negocio (<strong>{Math.round(scale * 100)}%</strong>): sale de 8 × 4 cm.</>
+              : <>Ajuste propio de este computador: <strong>{Math.round(scale * 100)}%</strong>. La regla debe medir 10 cm.</>}
+          </p>
+          {!isStandard && (
+            <button type="button" onClick={() => onScale(BUSINESS_PRINT_SCALE, false)}
               className="shrink-0 text-[11px] font-medium text-emerald-700 underline">
-              Quitar
+              Volver al estándar
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

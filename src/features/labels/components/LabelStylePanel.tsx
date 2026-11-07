@@ -123,7 +123,7 @@ export function LabelStylePanel({ style, onChange, extraFields = [], hasLogo = f
         </div>
         <button
           type="button"
-          onClick={() => onChange(DEFAULT_STYLE)}
+          onClick={() => onChange({ ...DEFAULT_STYLE, printScale: style.printScale, printCalibrated: style.printCalibrated })}
           className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
         >
           Restablecer
@@ -300,7 +300,7 @@ export function LabelStylePanel({ style, onChange, extraFields = [], hasLogo = f
           <div className="flex flex-wrap gap-1.5">
             {templates.map((t) => (
               <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 py-1 pl-3 pr-1">
-                <button type="button" onClick={() => onChange(normalizeStyle(t.style))}
+                <button type="button" onClick={() => onChange({ ...normalizeStyle(t.style), printScale: style.printScale, printCalibrated: style.printCalibrated })}
                   className="text-xs font-semibold text-blue-700 hover:text-blue-900">
                   {t.name}
                 </button>
