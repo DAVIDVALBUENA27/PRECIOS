@@ -45,7 +45,7 @@ function writeLocal(key: string, value: unknown) {
 }
 
 /** Regla de 10 cm para la hoja de prueba (a tamaño real, como las etiquetas). */
-function TestRuler() {
+function TestRuler({ scale }: { scale: number }) {
   return (
     <div style={{ gridColumn: '1 / -1', paddingTop: '6mm', fontFamily: 'sans-serif' }}>
       <div style={{ position: 'relative', width: '100mm', height: '6mm', borderBottom: '0.6pt solid #000' }}>
@@ -61,6 +61,9 @@ function TestRuler() {
       <p style={{ fontSize: '8pt', marginTop: '2mm' }}>
         Mide esta regla con tu regla: debe medir 10 cm (de 0 a 10) y la etiqueta 8 × 4 cm.
         Si no, escribe en la app cuánto midió esta regla (ej. 8) y toca Ajustar.
+      </p>
+      <p style={{ fontSize: '8pt', marginTop: '1mm', fontWeight: 700 }}>
+        Ajuste de impresora en esta hoja: {Math.abs(scale - 1) < 0.001 ? 'ninguno (100%)' : `${Math.round(scale * 100)}%`}
       </p>
     </div>
   )
@@ -184,11 +187,14 @@ export function PrintPreview({
 
   // Hoja de prueba: imprime una sola etiqueta y una regla para medir
   const [testPrint, setTestPrint] = useState(false)
+  // Cuenta las hojas de prueba impresas: al terminar se pregunta cuánto midió la regla
+  const [testPrintedCount, setTestPrintedCount] = useState(0)
   useEffect(() => {
     if (!testPrint) return
     const id = setTimeout(() => {
       window.print()
       setTestPrint(false)
+      setTestPrintedCount((n) => n + 1)
     }, 100)
     return () => clearTimeout(id)
   }, [testPrint])
@@ -312,6 +318,7 @@ export function PrintPreview({
             scale={labelStyle.printScale || 1}
             onScale={(v) => setLabelStyle({ ...labelStyle, printScale: v })}
             onTestPrint={() => { if (confirmZoomBeforePrint()) setTestPrint(true) }}
+            testPrintedCount={testPrintedCount}
           />
 
           {/* Campos visibles */}
@@ -434,7 +441,7 @@ export function PrintPreview({
                   />
                 )
               })}
-              {testPrint && <TestRuler />}
+              {testPrint && <TestRuler scale={labelStyle.printScale || 1} />}
             </div>
           </div>
         </section>

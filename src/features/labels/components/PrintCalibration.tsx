@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 /** Largo de la regla de la hoja de prueba. */
 const RULER_CM = 10
 
@@ -18,6 +19,8 @@ interface Props {
   scale: number
   onScale: (scale: number) => void
   onTestPrint: () => void
+  /** Sube en 1 cada vez que se imprime una hoja de prueba. */
+  testPrintedCount?: number
 }
 
 /** Zoom del navegador aproximado (Chrome/Edge): 1 = 100 %. */
@@ -54,8 +57,13 @@ function useBrowserZoom(): number | null {
   return zoom
 }
 
-export function PrintCalibration({ scale, onScale, onTestPrint }: Props) {
+export function PrintCalibration({ scale, onScale, onTestPrint, testPrintedCount = 0 }: Props) {
   const [measured, setMeasured] = useState('')
+  // Después de imprimir la hoja de prueba se pregunta de una vez cuánto midió
+  const [asking, setAsking] = useState(false)
+  useEffect(() => {
+    if (testPrintedCount > 0) setAsking(true)
+  }, [testPrintedCount])
   const zoom = useBrowserZoom()
   const zoomOff = zoom !== null && Math.abs(zoom - 1) >= 0.1
   const adjusted = Math.abs(scale - 1) > 0.001
@@ -72,10 +80,55 @@ export function PrintCalibration({ scale, onScale, onTestPrint }: Props) {
     if (!validMeasure) return
     onScale(Math.round(((RULER_CM / measuredCm) * scale) * 1000) / 1000)
     setMeasured('')
+    setAsking(false)
   }
 
   return (
     <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      {/* En un portal: dentro del panel lateral quedaba tapada por la vista previa */}
+      {asking && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 print:hidden">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl">
+            <div>
+              <p className="text-base font-bold text-slate-900">¿Cuánto midió la regla impresa?</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Mide con tu regla la regla de la hoja de prueba, de 0 a 10. Si cada centímetro impreso
+                mide 8 mm, escribe <strong>8</strong>.
+              </p>
+            </div>
+            <label className="flex items-center rounded-xl border border-slate-300 px-3 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+              <input
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                value={measured}
+                onChange={(e) => setMeasured(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && applyMeasure()}
+                placeholder="Ej: 8"
+                className="w-full bg-transparent py-2.5 text-lg font-semibold outline-none"
+              />
+              <span className="text-sm text-slate-400">cm</span>
+            </label>
+            {measured && !validMeasure && (
+              <p className="text-xs text-amber-700">Escribe la medida en centímetros, entre 5 y 15.</p>
+            )}
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={applyMeasure} disabled={!validMeasure}
+                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">
+                Ajustar y guardar
+              </button>
+              <button type="button" onClick={() => { setAsking(false); setMeasured('') }}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                Midió 10 cm, está bien
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Después de ajustar, imprime otra hoja de prueba para confirmar.
+            </p>
+          </div>
+        </div>,
+        document.body,
+      )}
       <div>
         <p className="text-sm font-bold text-slate-900">Medida exacta: 8 × 4 cm</p>
         <p className="text-[11px] text-slate-500">Revisa esto si al medir con la regla sale más pequeña.</p>
