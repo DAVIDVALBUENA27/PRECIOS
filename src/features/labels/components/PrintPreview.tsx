@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ProductWithDiff } from '@/features/labels/types'
 import { LabColor } from '@/features/labels/hooks/useLabColors'
 import { LabelStylePanel } from './LabelStylePanel'
-import { PrintCalibration } from './PrintCalibration'
+import { PrintCalibration, confirmZoomBeforePrint } from './PrintCalibration'
 import { DEFAULT_STYLE, normalizeStyle, type LabelStyle, type PaperSize } from '@/features/labels/types/labelStyle'
 import { SingleTag } from './tags/SingleTag'
 import { GroupedTag } from './tags/GroupedTag'
@@ -22,10 +22,10 @@ const PAPER_CFG: Record<PaperSize, { page: string; usableW: number; usableH: num
 
 function calcGrid(style: LabelStyle) {
   const cfg = PAPER_CFG[style.paper]
-  // Con ajuste de impresora la etiqueta ocupa más en la hoja "virtual"
-  const s = style.printScale || 1
-  const cols = Math.max(1, Math.floor(cfg.usableW / (style.labelWidth * s)))
-  const rows = Math.max(1, Math.floor(cfg.usableH / (style.labelHeight * s)))
+  // El ajuste de impresora (printScale) NO cambia cuántas caben: compensa una
+  // reducción de toda la impresión (ej. 75%), así que la hoja "crece" igual.
+  const cols = Math.max(1, Math.floor(cfg.usableW / style.labelWidth))
+  const rows = Math.max(1, Math.floor(cfg.usableH / style.labelHeight))
   return { cols, perSheet: cols * rows, ...cfg }
 }
 
@@ -128,7 +128,7 @@ export function PrintPreview({
   }, [products])
 
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>(() => ({
-    lab: true, sku: true, barcode: true, unitPrice: true,
+    lab: true, sku: true, barcode: true, unitPrice: true, codeLabels: true,
     logo: !!logoUrl, priceChange: false,
     ...(readLocal<Record<string, boolean>>(LS_FIELDS) ?? {}),
   }))
@@ -243,6 +243,7 @@ export function PrintPreview({
     { key: 'lab', label: 'Laboratorio' },
     { key: 'sku', label: 'SKU' },
     { key: 'barcode', label: 'Código de barras' },
+    { key: 'codeLabels', label: 'Palabras «SKU:» y «Bar:» antes de los códigos' },
     { key: 'unitPrice', label: 'Precio por unidad' },
     { key: 'priceChange', label: '▲▼ Cambio de precio' },
     ...(logoUrl ? [{ key: 'logo', label: 'Logo del negocio' }] : []),
@@ -274,7 +275,7 @@ export function PrintPreview({
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={() => { if (confirmZoomBeforePrint()) window.print() }}
               disabled={products.length === 0}
               className="w-full rounded-md bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
             >
@@ -306,6 +307,12 @@ export function PrintPreview({
               ))}
             </div>
           </div>
+
+          <PrintCalibration
+            scale={labelStyle.printScale || 1}
+            onScale={(v) => setLabelStyle({ ...labelStyle, printScale: v })}
+            onTestPrint={() => { if (confirmZoomBeforePrint()) setTestPrint(true) }}
+          />
 
           {/* Campos visibles */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -345,11 +352,6 @@ export function PrintPreview({
             </div>
           </div>
 
-          <PrintCalibration
-            scale={labelStyle.printScale || 1}
-            onScale={(v) => setLabelStyle({ ...labelStyle, printScale: v })}
-            onTestPrint={() => setTestPrint(true)}
-          />
 
           <LabelStylePanel
             style={labelStyle}
