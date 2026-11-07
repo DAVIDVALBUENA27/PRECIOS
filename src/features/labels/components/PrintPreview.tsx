@@ -316,7 +316,7 @@ export function PrintPreview({
 
           <PrintCalibration
             scale={labelStyle.printScale || 1}
-            onScale={(v) => setLabelStyle({ ...labelStyle, printScale: v })}
+            onScale={(v, calibrated) => setLabelStyle({ ...labelStyle, printScale: v, printCalibrated: calibrated })}
             onTestPrint={() => { if (confirmZoomBeforePrint()) setTestPrint(true) }}
             testPrintedCount={testPrintedCount}
           />

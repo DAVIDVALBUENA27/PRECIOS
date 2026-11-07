@@ -10,6 +10,13 @@ export type PaperSize = 'carta' | 'oficio'
 export const LABEL_WIDTH_MM = 80
 export const LABEL_HEIGHT_MM = 40
 
+/**
+ * Ajuste estándar de la impresora del negocio: su impresión sale al 80 %
+ * (la regla de 10 cm mide 8 cm), así que se imprime al 125 % para que la
+ * etiqueta mida 8 × 4 cm. Se aplica en cualquier computador sin calibrar.
+ */
+export const BUSINESS_PRINT_SCALE = 1.25
+
 /** Ajuste opcional por columna dinámica del CSV. */
 export interface FieldOverride {
   size?: number
@@ -28,6 +35,8 @@ export interface LabelStyle {
    * que reduce la hoja (1 = sin ajuste; 80/60 si la etiqueta salía de 6 cm).
    */
   printScale: number
+  /** true si este computador se calibró con la regla (si no, se usa el estándar). */
+  printCalibrated?: boolean
   // Fondo y borde
   bgColor: string
   borderColor: string
@@ -69,7 +78,8 @@ export const DEFAULT_STYLE: LabelStyle = {
   paper: 'carta',
   labelWidth: LABEL_WIDTH_MM,
   labelHeight: LABEL_HEIGHT_MM,
-  printScale: 1,
+  printScale: BUSINESS_PRINT_SCALE,
+  printCalibrated: false,
   bgColor: '#ffffff',
   borderColor: '#999999',
   borderWidth: 0.5,
@@ -109,6 +119,9 @@ export function normalizeStyle(style: Partial<LabelStyle> | null | undefined): L
     ...(style ?? {}),
     extraOverrides: { ...(style?.extraOverrides ?? {}) },
     extraOrder: [...(style?.extraOrder ?? [])],
+    // Sin calibración propia del computador se usa el ajuste estándar del negocio
+    printScale: style?.printCalibrated && style.printScale ? style.printScale : BUSINESS_PRINT_SCALE,
+    printCalibrated: Boolean(style?.printCalibrated && style.printScale),
     // El tamaño es estándar: plantillas o diseños viejos con otro tamaño se corrigen
     labelWidth: LABEL_WIDTH_MM,
     labelHeight: LABEL_HEIGHT_MM,
