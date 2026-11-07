@@ -59,8 +59,8 @@ function TestRuler() {
         ))}
       </div>
       <p style={{ fontSize: '8pt', marginTop: '2mm' }}>
-        Esta regla mide 10 cm y la etiqueta de arriba debe medir 8 × 4 cm. Si no coinciden,
-        escribe en la app cuánto midió el ancho de la etiqueta.
+        Mide esta regla con tu regla: debe medir 10 cm (de 0 a 10) y la etiqueta 8 × 4 cm.
+        Si no, escribe en la app cuánto midió esta regla (ej. 8) y toca Ajustar.
       </p>
     </div>
   )

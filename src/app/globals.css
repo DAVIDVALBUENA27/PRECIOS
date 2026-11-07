@@ -177,22 +177,46 @@
   width: 100%;
 }
 
+/*
+ * Al imprimir solo existe la hoja de etiquetas (#print-area):
+ * - todo lo que no la contiene se quita del todo (display: none), para que no
+ *   ocupe espacio: antes generaba una hoja en blanco al final y podía hacer
+ *   que el navegador redujera la impresión para "que cupiera";
+ * - los contenedores que la envuelven pierden márgenes, rellenos y alturas.
+ */
 @media print {
-  body * {
-    visibility: hidden;
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #fff !important;
   }
 
-  #print-area,
-  #print-area * {
-    visibility: visible;
+  body *:not(:has(#print-area)):not(#print-area):not(#print-area *) {
+    display: none !important;
+  }
+
+  body *:has(#print-area) {
+    display: block !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    max-width: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    background: none !important;
+    transform: none !important;
   }
 
   #print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
+    margin: 0 !important;
+    box-shadow: none !important;
   }
 }
